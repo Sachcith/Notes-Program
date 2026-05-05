@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERP UI</title>
+
+<style>
+:root {
+    --bg: #0d0d0d;
+    --card: #1a1a1a;
+    --accent: #3498db;
+    --text: #f5f5f5;
+}
+
+/* LAYOUT */
+body {
+    margin: 0;
+    display: grid;
+    grid-template-rows: 80px 1fr;
+    grid-template-columns: 260px 1fr;
+    grid-template-areas:
+        "top top"
+        "left main";
+    height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial;
+}
+
+/* TOP */
+.top {
+    grid-area: top;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: #111;
+    gap: 10px;
+    overflow-x: auto;
+}
+
+.location-btn {
+    padding: 12px 20px;
+    border: none;
+    cursor: pointer;
+    background: var(--accent);
+    color: white;
+    font-weight: bold;
+}
+
+.top input {
+    margin-left: auto;
+    padding: 10px;
+    width: 200px;
+}
+
+/* LEFT */
+.left {
+    grid-area: left;
+    background: #111;
+    padding: 15px;
+    border-right: 1px solid var(--accent);
+}
+
+.left h3 {
+    margin-bottom: 10px;
+}
+
+.left input {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 8px;
+}
+
+/* MAIN */
+.main {
+    grid-area: main;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+/* GRID PAGES */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+/* PAGE CARD */
+.page {
+    background: var(--card);
+    padding: 15px;
+    border-left: 5px solid var(--accent);
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.page.selected {
+    outline: 2px solid var(--accent);
+}
+
+/* ACTION BAR */
+.actions {
+    margin-bottom: 10px;
+}
+
+.actions button {
+    padding: 8px 12px;
+    margin-right: 5px;
+}
+
+/* EDIT MODE */
+.page input {
+    width: 100%;
+    margin-bottom: 5px;
+}
+
+/* RESPONSIVE */
+@media(max-width:600px){
+    body {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "top"
+            "main";
+    }
+    .left {
+        display: none;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- TOP -->
+<div class="top">
+    <button class="location-btn" onclick="setLocation('TN')">Tamil Nadu</button>
+    <button class="location-btn" onclick="setLocation('KA')">Karnataka</button>
+    <button class="location-btn" onclick="setLocation('AP')">Andhra</button>
+
+    <button>Reports</button>
+    <button>Stock</button>
+    <button>Insights</button>
+
+    <input id="search" placeholder="Search person...">
+</div>
+
+<!-- LEFT FILTER -->
+<div class="left">
+    <h3>Filters</h3>
+    <input type="date">
+    <input type="date">
+    <input type="number" placeholder="Max transactions">
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<div class="actions">
+    <button id="editBtn" disabled onclick="editPage()">Edit</button>
+    <button id="saveBtn" disabled onclick="savePage()">Save</button>
+    <button id="deleteBtn" disabled onclick="deletePage()">Delete</button>
+    <button id="printBtn" disabled onclick="printPage()">Print</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+</div>
+
+<script>
+let selectedPage = null;
+let editMode = false;
+
+/* SAMPLE DATA */
+let data = Array.from({length:12}, (_,i)=>({
+    id:i,
+    name:"Client "+i,
+    item:"Item "+i,
+    qty:10,
+    profit:5
+}));
+
+/* RENDER */
+function render() {
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+
+    data.forEach(d=>{
+        const div = document.createElement("div");
+        div.className = "page";
+        div.onclick = ()=>selectPage(div,d);
+
+        div.innerHTML = `
+            <b>${d.name}</b><br>
+            Item: ${d.item}<br>
+            Qty: ${d.qty}<br>
+            Profit: ${d.profit}%
+        `;
+
+        grid.appendChild(div);
+    });
+}
+
+/* SELECT */
+function selectPage(el, dataObj) {
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("selected"));
+    el.classList.add("selected");
+
+    selectedPage = {el, dataObj};
+
+    enableActions(true);
+}
+
+/* ENABLE BUTTONS */
+function enableActions(val) {
+    ["editBtn","saveBtn","deleteBtn","printBtn"].forEach(id=>{
+        document.getElementById(id).disabled = !val;
+    });
+}
+
+/* EDIT */
+function editPage() {
+    if(!selectedPage) return;
+
+    editMode = true;
+    const d = selectedPage.dataObj;
+
+    selectedPage.el.innerHTML = `
+        <input value="${d.name}">
+        <input value="${d.item}">
+        <input value="${d.qty}">
+        <input value="${d.profit}">
+    `;
+}
+
+/* SAVE */
+function savePage() {
+    if(!editMode) return;
+
+    const inputs = selectedPage.el.querySelectorAll("input");
+
+    selectedPage.dataObj.name = inputs[0].value;
+    selectedPage.dataObj.item = inputs[1].value;
+    selectedPage.dataObj.qty = inputs[2].value;
+    selectedPage.dataObj.profit = inputs[3].value;
+
+    editMode = false;
+    render();
+}
+
+/* DELETE */
+function deletePage() {
+    data = data.filter(d => d !== selectedPage.dataObj);
+    selectedPage = null;
+    enableActions(false);
+    render();
+}
+
+/* PRINT */
+function printPage() {
+    alert("Print logic here");
+}
+
+/* LOCATION THEME */
+function setLocation(loc) {
+    const colors = {
+        TN:"#e74c3c",
+        KA:"#27ae60",
+        AP:"#2980b9"
+    };
+    document.documentElement.style.setProperty('--accent', colors[loc]);
+}
+
+/* SEARCH */
+document.getElementById("search").addEventListener("input", (e)=>{
+    const val = e.target.value.toLowerCase();
+    data = data.filter(d => d.name.toLowerCase().includes(val));
+    render();
+});
+
+/* INIT */
+render();
+</script>
+
+</body>
+</html>

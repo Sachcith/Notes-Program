@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERP System</title>
+
+<style>
+:root {
+    --bg: #0d0d0d;
+    --card: #1a1a1a;
+    --accent: #3498db;
+    --text: #f5f5f5;
+}
+
+body {
+    margin: 0;
+    display: grid;
+    grid-template-rows: 70px 1fr;
+    grid-template-columns: 250px 1fr;
+    grid-template-areas:
+        "top top"
+        "left main";
+    height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial;
+}
+
+/* TOP */
+.top {
+    grid-area: top;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    gap: 10px;
+    background: #111;
+}
+
+.location-btn {
+    padding: 10px 15px;
+    background: var(--accent);
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+/* LEFT */
+.left {
+    grid-area: left;
+    padding: 15px;
+    background: #111;
+    border-right: 1px solid var(--accent);
+}
+
+/* MAIN */
+.main {
+    grid-area: main;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+/* GRID */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+/* CARD */
+.page {
+    background: var(--card);
+    padding: 15px;
+    border-left: 5px solid var(--accent);
+    cursor: pointer;
+}
+
+/* FULL VIEW */
+.full {
+    width: 100%;
+}
+
+/* INPUT */
+input {
+    padding: 6px;
+    background: #222;
+    border: 1px solid #444;
+    color: white;
+}
+
+/* ITEM ROW (EXCEL STYLE) */
+.item-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* HEADER ROW */
+.header-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+/* STICKY TOTAL BAR */
+.total-bar {
+    position: sticky;
+    bottom: 0;
+    background: #111;
+    padding: 10px;
+    text-align: right;
+    border-top: 2px solid var(--accent);
+}
+
+/* BUTTON */
+button {
+    padding: 8px 12px;
+    margin-top: 5px;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top">
+    <button class="location-btn">Tamil Nadu</button>
+    <button onclick="addEntry()">+ Add Entry</button>
+</div>
+
+<div class="left">
+    <h3>Filters</h3>
+</div>
+
+<div class="main">
+    <div id="grid" class="grid"></div>
+</div>
+
+<script>
+let data = [];
+let selectedPage = null;
+
+/* RENDER */
+function render() {
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+
+    data.forEach(d => {
+        const div = document.createElement("div");
+        div.className = "page";
+
+        // 🔴 FIX: only open when clicking card, NOT inputs
+        div.addEventListener("click", (e) => {
+            if (e.target.tagName === "INPUT") return;
+            openPage(div, d);
+        });
+
+        div.innerHTML = `
+            <b>${d.name || "New Entry"}</b><br>
+            Old: ₹${d.oldBalance || 0}<br>
+            Items: ${d.items?.length || 0}<br>
+            Qty: ${d.totalQty || 0}<br>
+            Final: ₹${d.finalBalance || 0}<br>
+        `;
+
+        grid.appendChild(div);
+    });
+}
+
+/* ADD ENTRY */
+function addEntry() {
+    const newEntry = {
+        name: "",
+        oldBalance: 0,
+        items: []
+    };
+
+    data.unshift(newEntry);
+    render();
+
+    const first = document.querySelector(".page");
+    openPage(first, newEntry);
+}
+
+/* OPEN PAGE */
+function openPage(el, d) {
+    selectedPage = {el, d};
+
+    document.querySelectorAll(".page").forEach(p => p.style.display = "none");
+
+    el.style.display = "block";
+    el.classList.add("full");
+
+    renderEditView(d);
+}
+
+/* EDIT VIEW */
+function renderEditView(d) {
+    selectedPage.el.innerHTML = `
+        <h2>Edit Entry</h2>
+
+        <input id="name" placeholder="Name" value="${d.name || ""}">
+        <input id="oldBalance" placeholder="Old Balance" value="${d.oldBalance || 0}">
+
+        <div class="header-row">
+            <div>Item</div>
+            <div>Qty</div>
+            <div>Profit %</div>
+            <div>Wastage</div>
+            <div>Stone</div>
+        </div>
+
+        <div id="itemsContainer"></div>
+
+        <button onclick="addItemRow()">+ Add Item</button>
+
+        <br><br>
+
+        <input id="cash" placeholder="Cash Adjustment">
+
+        <div class="total-bar">
+            Total Qty: <span id="totalQty">0</span> |
+            Final: ₹<span id="finalBalance">0</span>
+        </div>
+
+        <button onclick="save()">Save</button>
+        <button onclick="cancel()">Cancel</button>
+    `;
+
+    setTimeout(() => {
+        if (!d.items || d.items.length === 0) {
+            addItemRow();
+        } else {
+            d.items.forEach(item => addItemRow(item));
+        }
+        calculate();
+    }, 0);
+}
+
+/* ADD ITEM ROW */
+function addItemRow(item = {}) {
+    const container = document.getElementById("itemsContainer");
+
+    const div = document.createElement("div");
+    div.className = "item-row";
+
+    div.innerHTML = `
+        <input value="${item.name || ""}">
+        <input type="number" value="${item.qty || ""}" oninput="calculate()">
+        <input type="number" value="${item.profit || ""}">
+        <input type="number" value="${item.wastage || ""}">
+        <input type="number" value="${item.stone || ""}">
+    `;
+
+    container.appendChild(div);
+}
+
+/* CALCULATE */
+function calculate() {
+    let totalQty = 0;
+
+    document.querySelectorAll(".item-row").forEach(row => {
+        const qty = parseFloat(row.children[1].value || 0);
+        totalQty += qty;
+    });
+
+    const old = parseFloat(document.getElementById("oldBalance").value || 0);
+    const cash = parseFloat(document.getElementById("cash").value || 0);
+
+    const final = old + totalQty * 100 + cash;
+
+    document.getElementById("totalQty").innerText = totalQty;
+    document.getElementById("finalBalance").innerText = final;
+}
+
+/* SAVE */
+function save() {
+    const d = selectedPage.d;
+
+    d.name = document.getElementById("name").value;
+    d.oldBalance = parseFloat(document.getElementById("oldBalance").value || 0);
+
+    const rows = document.querySelectorAll(".item-row");
+
+    let items = [];
+    let totalQty = 0;
+
+    rows.forEach(r => {
+        const inputs = r.querySelectorAll("input");
+
+        const item = {
+            name: inputs[0].value,
+            qty: parseFloat(inputs[1].value || 0),
+            profit: inputs[2].value,
+            wastage: inputs[3].value,
+            stone: inputs[4].value
+        };
+
+        totalQty += item.qty;
+        items.push(item);
+    });
+
+    const cash = parseFloat(document.getElementById("cash").value || 0);
+
+    d.items = items;
+    d.totalQty = totalQty;
+    d.finalBalance = d.oldBalance + totalQty * 100 + cash;
+    d.date = new Date().toLocaleString();
+
+    resetView();
+}
+
+/* CANCEL */
+function cancel() {
+    resetView();
+}
+
+/* RESET */
+function resetView() {
+    document.querySelectorAll(".page").forEach(p => {
+        p.style.display = "block";
+        p.classList.remove("full");
+    });
+
+    selectedPage = null;
+    render();
+}
+
+/* INIT */
+render();
+</script>
+
+</body>
+</html>

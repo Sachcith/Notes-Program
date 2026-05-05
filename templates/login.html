@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ERP Login</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/loginstyles.css') }}">
+</head>
+
+<body>
+
+<div class="login-page">
+
+    <div class="login-card">
+
+        <div class="login-header">
+            <h1>ERP System</h1>
+            <p id="title">Login to continue</p>
+        </div>
+
+        <form id="authForm" class="login-form">
+
+            <div class="input-group">
+                <label>Username</label>
+                <input id="username" type="text" placeholder="Enter username" required>
+            </div>
+
+            <div class="input-group">
+                <label>Password</label>
+                <input id="password" type="password" placeholder="Enter password" required>
+            </div>
+
+            <button type="submit" class="primary-btn">
+                Sign In
+            </button>
+
+        </form>
+
+        <div class="login-footer">
+            <span id="footerText">Don’t have an account?</span>
+            <a href="#" onclick="toggle()" class="switch-link">Switch to Signup</a>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+
+</body>
+</html>

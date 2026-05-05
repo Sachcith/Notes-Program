@@ -1,0 +1,200 @@
+:root {
+    --bg: #0d0d0d;
+    --card: #1a1a1a;
+    --accent: #3498db;
+    --text: #f5f5f5;
+}
+
+body {
+    margin: 0;
+    height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Arial;
+}
+
+/* APPLY GRID ONLY TO APP */
+#appPage {
+    display: grid;
+    grid-template-rows: 70px 1fr;
+    grid-template-columns: 250px 1fr;
+    grid-template-areas:
+        "top top"
+        "left main";
+    height: 100vh;
+}
+
+/* TOP */
+.top {
+    grid-area: top;
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    gap: 10px;
+    background: #111;
+}
+
+.location-btn {
+    padding: 10px 15px;
+    background: var(--accent);
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.top input {
+    margin-left: auto;
+    padding: 8px;
+}
+
+/* LEFT */
+.left {
+    grid-area: left;
+    padding: 15px;
+    background: #111;
+    border-right: 1px solid var(--accent);
+}
+
+/* MAIN */
+.main {
+    grid-area: main;
+    padding: 15px;
+    overflow-y: auto;
+}
+
+/* GRID */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+/* CARD */
+.page {
+    background: var(--card);
+    padding: 15px;
+    border-left: 5px solid var(--accent);
+    cursor: pointer;
+}
+
+/* FULL VIEW */
+.full {
+    width: 100%;
+}
+
+/* INPUT */
+input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 6px;
+    background: #222;
+    border: 1px solid #444;
+    color: white;
+}
+
+/* BUTTON */
+button {
+    padding: 8px 12px;
+    margin-top: 5px;
+    cursor: pointer;
+    border-radius: 7px;
+}
+
+/* ===============================
+   SELECTED CARD HIGHLIGHT
+================================= */
+.page.selected {
+    border: 2px solid var(--accent);
+    border-left: 6px solid var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    transform: scale(1.02);
+    background: #222;
+}
+
+/* ===============================
+   SMOOTH CARD INTERACTION
+================================= */
+.page {
+    transition: all 0.2s ease;
+}
+
+.page:hover {
+    transform: scale(1.01);
+}
+
+/* ===============================
+   EXCEL-STYLE ITEM ROWS
+================================= */
+.item-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* ===============================
+   HEADER ROW (COLUMN LABELS)
+================================= */
+.header-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+/* ===============================
+   STICKY TOTAL BAR (BOTTOM RIGHT)
+================================= */
+.total-bar {
+    position: sticky;
+    bottom: 0;
+    background: #111;
+    padding: 10px;
+    text-align: right;
+    border-top: 2px solid var(--accent);
+}
+
+/* ===============================
+   INPUT IMPROVEMENT (DARK UI)
+================================= */
+input {
+    background: #222;
+    border: 1px solid #444;
+    color: white;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.home-page {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+
+.home-center {
+    display: grid;
+    gap: 20px;
+    width: min(400px, 90%);
+}
+
+.home-center button {
+    padding: 20px;
+    font-size: 18px;
+    background: var(--card);
+    border: 2px solid var(--accent);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.logout-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
