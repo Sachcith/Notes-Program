@@ -53,7 +53,6 @@ function cancelItem(){
 }
 
 function editItem() {
-    
     if (!selectedPage || !selectedPage.el) {
         console.error("selectedPage not set");
         return;
@@ -108,7 +107,10 @@ socket.on("editItemOk",(e)=>{
 });
 
 function deleteItem(){
-    if (!selectedPage) return;
+    if (!selectedPage || !selectedPage.el) {
+        console.error("selectedPage not set");
+        return;
+    }
 
     const ok = confirm("Are you sure you want to delete this Item?");
 

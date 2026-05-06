@@ -68,6 +68,12 @@ class Transaction(Base):
     id = Column(Integer, primary_key=True)
     entity_id = Column(Integer, ForeignKey("entities.id"))
 
+    old_balance = Column(Float,nullable=False,default=0)
+    new_balance = Column(Float,nullable=False,default=0)
+
+    base_weight = Column(Float)
+    final_weight = Column(Float)
+
     created_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
     updated_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
     created_by = Column(Integer)
@@ -79,10 +85,13 @@ class TransactionItem(Base):
     transaction_id = Column(Integer, ForeignKey("transactions.id"))
     item_id = Column(Integer, ForeignKey("items.id"))
 
+    seal = Column(Integer, ForeignKey("entities.id"))
+
     profit_percent = Column(Float)
     wastage_percent = Column(Float)
     stone_less = Column(Float)
     cash = Column(Integer)
+    gold_rate = Column(Float)
 
     type = Column(SQLEnum(TransactionType), nullable=False)
 

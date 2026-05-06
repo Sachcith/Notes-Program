@@ -198,3 +198,163 @@ input {
     top: 20px;
     right: 20px;
 }
+
+.input-wrapper {
+    position: relative;
+}
+
+.dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background: #222;
+    border: 1px solid #444;
+    z-index: 1000;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.dropdown div {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.dropdown div:hover {
+    background: var(--accent);
+}
+
+.dropdown div.active {
+    background: var(--accent);
+}
+/* ===============================
+   ITEM GRID (TABLE STRUCTURE)
+================================= */
+.item-row, .header-row {
+    display: grid;
+    grid-template-columns: 
+        2fr   /* Item */
+        1fr   /* Base Wt */
+        1.5fr /* Seal */
+        1fr   /* Profit */
+        1fr   /* Wastage */
+        1fr   /* Stone */
+        1fr   /* Qty */
+        1fr   /* Final Wt */
+        1fr;  /* Type */
+    gap: 8px;
+    align-items: center;
+}
+
+/* ===============================
+   PREVENT INPUT BREAKING GRID
+================================= */
+.item-row input,
+.item-row button {
+    width: 100%;
+    min-width: 0;
+}
+
+/* ===============================
+   SCROLLABLE ITEMS AREA
+================================= */
+#itemsContainer {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 400px; /* adjust if needed */
+    padding-right: 5px;
+}
+
+/* ===============================
+   FORM CONTAINER (IMPORTANT)
+================================= */
+.form-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* ===============================
+   GRID FULL WIDTH FIX
+================================= */
+.page.full {
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+/* ===============================
+   BOTTOM PANEL (FIXED INSIDE VIEW)
+================================= */
+.bottom-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+
+    position: sticky;
+    bottom: 0;
+
+    background: #111;
+    padding: 10px;
+    border-top: 2px solid var(--accent);
+    margin-top: 10px;
+}
+
+/* ===============================
+   LEFT SIDE (GOLD RATE + CASH)
+================================= */
+.bottom-left {
+    display: flex;
+    gap: 10px;
+}
+
+.bottom-left input {
+    width: 120px;
+}
+
+/* ===============================
+   RIGHT SIDE (TOTALS)
+================================= */
+.bottom-right {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* ===============================
+   TYPE BUTTON (BUY / SELL)
+================================= */
+.type-btn {
+    border: none;
+    cursor: pointer;
+    color: white;
+    font-weight: bold;
+    padding: 6px;
+}
+
+.type-btn.buy {
+    background: #27ae60;
+}
+
+.type-btn.sell {
+    background: #e74c3c;
+}
+
+/* ===============================
+   HEADER STYLE
+================================= */
+.header-row {
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+/* ===============================
+   SMOOTH SCROLL (OPTIONAL)
+================================= */
+#itemsContainer::-webkit-scrollbar {
+    width: 6px;
+}
+
+#itemsContainer::-webkit-scrollbar-thumb {
+    background: var(--accent);
+}

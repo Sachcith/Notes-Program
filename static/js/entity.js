@@ -4,7 +4,8 @@ function getEntity(){
     selectedPage = null;
     const grid = document.getElementById("grid");
     grid.innerHTML = "";
-    socket.emit("getEntity",{token: localStorage.getItem("token")});
+    // socket.emit("getEntity",{token: localStorage.getItem("token")});
+    searchbar();
 }
 
 /* SOCKET FOR RENDERING ENTITY */
@@ -38,15 +39,17 @@ function addEntity(){
             <h2>Add Entity</h2>
 
             <label>Name</label>
-            <input id="name" placeholder="Enter name" value="${current_name}">
+            <div class="input-wrapper">
+                <input id="name" placeholder="Enter name" value="${current_name}" autocomplete="off">
+                <div id="nameDropdown" class="dropdown"></div>
+            </div>
 
             <label>Type</label>
             <br>
             <button class="customerbutton" onclick=selectButton(event)>Customer</button>
             <button class="manufacturerbutton" onclick=selectButton(event)>Manufacturer</button>
             <button class="wholesalerbutton" onclick=selectButton(event)>Wholesaler</button>
-            <br>
-            <br>
+            <br><br>
 
             <label>Balance</label>
             <input id="balance" type="number" value="0">
@@ -55,7 +58,10 @@ function addEntity(){
             <input id="phone" placeholder="Enter phone">
 
             <label>Location</label>
-            <input id="location" placeholder="Enter location">
+            <div class="input-wrapper">
+                <input id="location" placeholder="Enter location" autocomplete="off">
+                <div id="locationDropdown" class="dropdown"></div>
+            </div>
 
             <div class="actions">
                 <button onclick="saveEntity()">Save</button>
@@ -65,7 +71,135 @@ function addEntity(){
     `;
     set_current_mode();
     unlock = false;
+    const nameInput = document.getElementById("name");
+    const nameDropdown = document.getElementById("nameDropdown");
+
+    nameInput.addEventListener("input", () => {
+        const value = nameInput.value;
+
+        socket.emit("searchEntityName", {
+            token: localStorage.getItem("token"),
+            value: value
+        });
+    });
+
+    const locationInput = document.getElementById("location");
+    const locationDropdown = document.getElementById("locationDropdown");
+
+    locationInput.addEventListener("input", () => {
+        const value = locationInput.value;
+
+        socket.emit("searchEntityLocation", {
+            token: localStorage.getItem("token"),
+            value: value
+        });
+    });
+
+    let activeIndex = -1;
+    let currentList = [];
+
+    socket.on("entityNameResults", (list) => {
+        currentList = list;
+        activeIndex = -1;
+        nameDropdown.innerHTML = "";
+
+        list.forEach((item, index) => {
+            const div = document.createElement("div");
+            div.innerText = item;
+
+            div.onclick = () => {
+                nameInput.value = item;
+                nameDropdown.innerHTML = "";
+            };
+
+            nameDropdown.appendChild(div);
+        });
+    });
+
+    nameInput.addEventListener("keydown", (e) => {
+        const items = nameDropdown.querySelectorAll("div");
+
+        if (!items.length) return;
+
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            activeIndex = (activeIndex + 1) % items.length;
+            updateHighlight(items, activeIndex); // ✅ FIX
+        }
+
+        if (e.key === "ArrowUp") {
+            e.preventDefault();
+            activeIndex = (activeIndex - 1 + items.length) % items.length;
+            updateHighlight(items, activeIndex); // ✅ FIX
+        }
+
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (activeIndex >= 0) {
+                nameInput.value = items[activeIndex].innerText;
+                nameDropdown.innerHTML = "";
+            }
+        }
+    });
+
+    let locationActiveIndex = -1;
+
+    socket.on("entityLocationResults", (list) => {
+        locationActiveIndex = -1;
+        locationDropdown.innerHTML = "";
+
+        list.forEach((item, index) => {
+            const div = document.createElement("div");
+            div.innerText = item;
+
+            div.onclick = () => {
+                locationInput.value = item;
+                locationDropdown.innerHTML = "";
+            };
+
+            locationDropdown.appendChild(div);
+        });
+    });
+
+    locationInput.addEventListener("keydown", (e) => {
+        const items = locationDropdown.querySelectorAll("div");
+
+        if (!items.length) return;
+
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            locationActiveIndex = (locationActiveIndex + 1) % items.length;
+            updateHighlight(items, locationActiveIndex);
+        }
+
+        if (e.key === "ArrowUp") {
+            e.preventDefault();
+            locationActiveIndex = (locationActiveIndex - 1 + items.length) % items.length;
+            updateHighlight(items, locationActiveIndex);
+        }
+
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (locationActiveIndex >= 0) {
+                locationInput.value = items[locationActiveIndex].innerText;
+                locationDropdown.innerHTML = "";
+            }
+        }
+    });
+
+    locationDropdown.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+    });
+    
     document.getElementById("name").focus();
+}
+
+function updateHighlight(items, index){
+    items.forEach(el => el.classList.remove("active"));
+
+    if (index >= 0) {
+        items[index].classList.add("active");
+    }
 }
 
 function cancelEntity(){
@@ -75,27 +209,31 @@ function cancelEntity(){
 }
 
 function editEntity() {
-    
     if (!selectedPage || !selectedPage.el) {
         console.error("selectedPage not set");
         return;
     }
+
     let d = selectedPage.d;
+    const grid = document.getElementById("grid");
+
     grid.innerHTML = `
         <div class="form-container">
 
-            <h2>Add Entity</h2>
+            <h2>Edit Entity</h2>
 
             <label>Name</label>
-            <input id="name" placeholder="Enter name" value="${d.name}">
+            <div class="input-wrapper">
+                <input id="name" placeholder="Enter name" value="${d.name}" autocomplete="off">
+                <div id="nameDropdown" class="dropdown"></div>
+            </div>
 
             <label>Type</label>
             <br>
             <button class="customerbutton" onclick=selectButton(event)>Customer</button>
             <button class="manufacturerbutton" onclick=selectButton(event)>Manufacturer</button>
             <button class="wholesalerbutton" onclick=selectButton(event)>Wholesaler</button>
-            <br>
-            <br>
+            <br><br>
 
             <label>Balance</label>
             <input id="balance" type="number" value="${d.balance}">
@@ -104,7 +242,10 @@ function editEntity() {
             <input id="phone" placeholder="Enter phone" value="${d.phone}">
 
             <label>Location</label>
-            <input id="location" placeholder="Enter location" value="${d.location}">
+            <div class="input-wrapper">
+                <input id="location" placeholder="Enter location" value="${d.location}" autocomplete="off">
+                <div id="locationDropdown" class="dropdown"></div>
+            </div>
 
             <div class="actions">
                 <button onclick="saveEntityEdit()">Save Changes</button>
@@ -112,9 +253,130 @@ function editEntity() {
             </div>
         </div>
     `;
-    set_current_mode();
-    unlock = false;  
 
+    set_current_mode();
+    unlock = false;
+
+    const nameInput = document.getElementById("name");
+    const nameDropdown = document.getElementById("nameDropdown");
+
+    const locationInput = document.getElementById("location");
+    const locationDropdown = document.getElementById("locationDropdown");
+
+    let activeIndex = -1;
+    let locationActiveIndex = -1;
+
+    // 🔥 NAME SEARCH
+    nameInput.addEventListener("input", () => {
+        socket.emit("searchEntityName", {
+            token: localStorage.getItem("token"),
+            value: nameInput.value
+        });
+    });
+
+    socket.off("entityNameResults");
+    socket.on("entityNameResults", (list) => {
+        activeIndex = -1;
+        nameDropdown.innerHTML = "";
+
+        list.forEach((item) => {
+            const div = document.createElement("div");
+            div.innerText = item;
+
+            div.onclick = () => {
+                nameInput.value = item;
+                nameDropdown.innerHTML = "";
+            };
+
+            nameDropdown.appendChild(div);
+        });
+    });
+
+    nameInput.addEventListener("keydown", (e) => {
+        const items = nameDropdown.querySelectorAll("div");
+        if (!items.length) return;
+
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            activeIndex = (activeIndex + 1) % items.length;
+            updateHighlight(items, activeIndex);
+        }
+
+        if (e.key === "ArrowUp") {
+            e.preventDefault();
+            activeIndex = (activeIndex - 1 + items.length) % items.length;
+            updateHighlight(items, activeIndex);
+        }
+
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (activeIndex >= 0) {
+                nameInput.value = items[activeIndex].innerText;
+                nameDropdown.innerHTML = "";
+            }
+        }
+    });
+
+    nameDropdown.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+    });
+
+    // 🔥 LOCATION SEARCH
+    locationInput.addEventListener("input", () => {
+        socket.emit("searchEntityLocation", {
+            token: localStorage.getItem("token"),
+            value: locationInput.value
+        });
+    });
+
+    socket.off("entityLocationResults");
+    socket.on("entityLocationResults", (list) => {
+        locationActiveIndex = -1;
+        locationDropdown.innerHTML = "";
+
+        list.forEach((item) => {
+            const div = document.createElement("div");
+            div.innerText = item;
+
+            div.onclick = () => {
+                locationInput.value = item;
+                locationDropdown.innerHTML = "";
+            };
+
+            locationDropdown.appendChild(div);
+        });
+    });
+
+    locationInput.addEventListener("keydown", (e) => {
+        const items = locationDropdown.querySelectorAll("div");
+        if (!items.length) return;
+
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            locationActiveIndex = (locationActiveIndex + 1) % items.length;
+            updateHighlight(items, locationActiveIndex);
+        }
+
+        if (e.key === "ArrowUp") {
+            e.preventDefault();
+            locationActiveIndex = (locationActiveIndex - 1 + items.length) % items.length;
+            updateHighlight(items, locationActiveIndex);
+        }
+
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (locationActiveIndex >= 0) {
+                locationInput.value = items[locationActiveIndex].innerText;
+                locationDropdown.innerHTML = "";
+            }
+        }
+    });
+
+    locationDropdown.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+    });
+
+    nameInput.focus();
 }
 
 function saveEntity(){
@@ -155,7 +417,10 @@ socket.on("editEntityOk",(e)=>{
 });
 
 function deleteEntity(){
-    if (!selectedPage) return;
+    if (!selectedPage || !selectedPage.el) {
+        console.error("selectedPage not set");
+        return;
+    }
 
     const ok = confirm("Are you sure you want to delete this entity?");
 

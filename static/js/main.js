@@ -9,6 +9,7 @@ window.onload = function () {
 
 let current_name = "";
 let current_mode = "customer";
+let currentModule = null;
 const socket = io();
 
 socket.on("error",(e)=>{
@@ -28,7 +29,10 @@ const modules = {
         left: [
             { id: "addBtn", label: "+ Add Entry", action: "addEntry()" },
             { id: "editBtn", label: "Edit", action: "editSelected()" },
-            { id: "deleteBtn", label: "Delete", action: "deleteSelected()" }
+            { id: "deleteBtn", label: "Delete", action: "deleteSelected()" },
+            { id: "customer", label: "Customer", action: "selectButton(event)" , class: "customerbutton"},
+            { id: "manufacturer", label: "Manufacturer", action: "selectButton(event)" , class: "manufacturerbutton"},
+            { id: "wholesaler", label: "Wholesaler", action: "selectButton(event)" , class: "wholesalerbutton"},
         ]
     },
 
@@ -61,6 +65,7 @@ const modules = {
 };
 
 function openModule(type) {
+    currentModule = type;
 
     document.getElementById("homePage").classList.add("hidden");
     document.getElementById("appPage").classList.remove("hidden");
@@ -72,7 +77,7 @@ function openModule(type) {
     renderLeft(type);
 
     if (type === "entry") {
-        renderEntry();
+        getTransaction();
     }
 
     if (type === "item") {
@@ -115,6 +120,12 @@ function renderTop(module) {
     search.id = "searchInput";
     search.placeholder = "Search...";
     search.value = current_name;
+    search.setAttribute("autocomplete", "off");
+
+    
+    search.addEventListener("input", function(){
+        searchbar();
+    });
 
     // ✅ attach event HERE (correct place)
     search.addEventListener("keyup", function(e){
@@ -126,6 +137,32 @@ function renderTop(module) {
         }
     });
     top.appendChild(search);
+}
+
+let searchTimeout;
+function searchbar(){
+    clearTimeout(searchTimeout);
+    let search = document.getElementById("searchInput");
+
+    searchTimeout = setTimeout(() => {
+        current_name = search.value;
+
+        if (currentModule === "item") {
+            socket.emit("searchItem", {
+                token: localStorage.getItem("token"),
+                value: current_name
+            });
+        }
+
+        if (currentModule === "entity") {
+            socket.emit("searchEntity", {
+                token: localStorage.getItem("token"),
+                value: current_name,
+                type: current_mode
+            });
+        }
+
+    }, 200);
 }
 
 function renderLeft(module) {
@@ -219,28 +256,42 @@ function renderEntryEditView(d) {
     selectedPage.el.innerHTML = `
         <h2>Edit Entry</h2>
 
-        <input id="name" placeholder="Name" value="${d.name || current_name}">
-        <input id="oldBalance" placeholder="Old Balance" value="${d.oldBalance || 0}">
+        <!-- ENTITY -->
+        <input id="entity" placeholder="Entity Name" value="${d.name || current_name}">
 
+        <!-- ITEMS HEADER -->
         <div class="header-row">
             <div>Item</div>
+            <div>Type</div>
             <div>Qty</div>
             <div>Profit %</div>
-            <div>Wastage</div>
+            <div>Wastage %</div>
             <div>Stone</div>
+            <div>Seal</div>
         </div>
 
+        <!-- ITEMS -->
         <div id="itemsContainer"></div>
 
         <button onclick="addItemRow()">+ Add Item</button>
 
-        <br><br>
+        <!-- BOTTOM PANEL -->
+        <div class="bottom-panel">
 
-        <input id="cash" placeholder="Cash Adjustment">
+            <!-- LEFT SIDE -->
+            <div class="bottom-left">
+                <input id="goldRate" type="number" placeholder="Gold Rate">
+                <input id="cash" type="number" placeholder="Cash Adjustment">
+            </div>
 
-        <div class="total-bar">
-            Total Qty: <span id="totalQty">0</span> |
-            Final: ₹<span id="finalBalance">0</span>
+            <!-- RIGHT SIDE -->
+            <div class="bottom-right">
+                <div>Total Qty: <span id="totalQty">0</span></div>
+                <div>Base Weight: <span id="totalBase">0</span></div>
+                <div>Final Weight: <span id="totalFinal">0</span></div>
+                <div>Balance: ₹<span id="finalBalance">0</span></div>
+            </div>
+
         </div>
 
         <button onclick="saveEntry()">Save</button>
@@ -268,40 +319,38 @@ function addItemRow(item = {}) {
     div.className = "item-row";
 
     div.innerHTML = `
-        <input value="${item.name || ""}">
-        <input type="number" value="${item.qty || ""}">
-        <input type="number" value="${item.profit || ""}">
-        <input type="number" value="${item.wastage || ""}">
-        <input type="number" value="${item.stone || ""}">
+        <input placeholder="Item" value="${item.item_name || ""}">
+
+        <input type="number" placeholder="Base Wt" value="${item.base_weight || ""}">
+
+        <input placeholder="Seal" value="${item.seal_name || ""}">
+
+        <input type="number" placeholder="Profit %" value="${item.profit_percent || ""}">
+        <input type="number" placeholder="Wastage %" value="${item.wastage_percent || ""}">
+        <input type="number" placeholder="Stone" value="${item.stone_less || ""}">
+
+        <input type="number" placeholder="Qty" value="${item.quantity || ""}">
+
+        <input type="number" placeholder="Final Wt" value="${item.final_weight || ""}">
+
+        <button class="type-btn ${item.type === "SELL" ? "sell" : "buy"}">
+            ${item.type === "SELL" ? "SELL" : "BUY"}
+        </button>
     `;
 
-    // 🔥 Add keyboard navigation
-    const inputs = div.querySelectorAll("input");
+    // 🔥 Toggle logic
+    const btn = div.querySelector(".type-btn");
 
-    inputs.forEach((input, index) => {
-        input.addEventListener("keydown", function(e){
-            if (e.key === "Enter") {
-                e.preventDefault();
-
-                // 👉 move to next input in same row
-                if (index < inputs.length - 1) {
-                    inputs[index + 1].focus();
-                } else {
-                    // 👉 last column → go to next row OR create new row
-                    const nextRow = div.nextElementSibling;
-
-                    if (nextRow) {
-                        nextRow.querySelector("input").focus();
-                    } else {
-                        addItemRow(); // create new row
-                        setTimeout(() => {
-                            const rows = container.querySelectorAll(".item-row");
-                            rows[rows.length - 1].querySelector("input").focus();
-                        }, 0);
-                    }
-                }
-            }
-        });
+    btn.addEventListener("click", () => {
+        if (btn.innerText === "BUY") {
+            btn.innerText = "SELL";
+            btn.classList.remove("buy");
+            btn.classList.add("sell");
+        } else {
+            btn.innerText = "BUY";
+            btn.classList.remove("sell");
+            btn.classList.add("buy");
+        }
     });
 
     container.appendChild(div);
@@ -448,7 +497,16 @@ function selectButton(e){
         });
         current_mode = "wholesaler";
     }
-    if(unlock) getEntity();
+    if(unlock){
+
+        if (currentModule === "entry") {
+            getTransaction();
+        }
+
+        if (currentModule === "entity") {
+            getEntity();
+        }
+    }
 }
 
 function set_current_mode(){
