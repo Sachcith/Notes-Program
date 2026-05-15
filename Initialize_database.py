@@ -23,6 +23,10 @@ class TransactionType(Enum):
     SALE = "sale"
     PURCHASE = "purchase"
 
+class PhotoSent(Enum):
+    SENT = "sent"
+    NOT_SENT = "not_sent"
+
 class Entities(Base):
     __tablename__ = "entities"
 
@@ -74,8 +78,14 @@ class Transaction(Base):
     base_weight = Column(Float)
     final_weight = Column(Float)
 
+    cash = Column(Integer)
+    gold_rate = Column(Float)
+
     created_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
     updated_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
+
+    photo = Column(SQLEnum(PhotoSent),default=PhotoSent.NOT_SENT,nullable=False)
+
     created_by = Column(Integer)
 
 class TransactionItem(Base):
@@ -83,15 +93,15 @@ class TransactionItem(Base):
 
     id = Column(Integer, primary_key=True)
     transaction_id = Column(Integer, ForeignKey("transactions.id"))
+
     item_id = Column(Integer, ForeignKey("items.id"))
+    touch = Column(Float)
 
     seal = Column(Integer, ForeignKey("entities.id"))
 
     profit_percent = Column(Float)
     wastage_percent = Column(Float)
     stone_less = Column(Float)
-    cash = Column(Integer)
-    gold_rate = Column(Float)
 
     type = Column(SQLEnum(TransactionType), nullable=False)
 

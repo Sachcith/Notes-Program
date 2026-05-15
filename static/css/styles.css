@@ -1,8 +1,22 @@
+/* CHROME, EDGE, SAFARI */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* FIREFOX */
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
 :root {
     --bg: #0d0d0d;
     --card: #1a1a1a;
     --accent: #3498db;
     --text: #f5f5f5;
+    /* --bottom-panel-height: 100px; */
 }
 
 body {
@@ -60,6 +74,7 @@ body {
     grid-area: main;
     padding: 15px;
     overflow-y: auto;
+    min-height: 0;
 }
 
 /* GRID */
@@ -90,6 +105,7 @@ input {
     background: #222;
     border: 1px solid #444;
     color: white;
+    box-sizing: border-box;
 }
 
 /* BUTTON */
@@ -98,6 +114,7 @@ button {
     margin-top: 5px;
     cursor: pointer;
     border-radius: 7px;
+    box-sizing: border-box;
 }
 
 /* ===============================
@@ -120,39 +137,6 @@ button {
 
 .page:hover {
     transform: scale(1.01);
-}
-
-/* ===============================
-   EXCEL-STYLE ITEM ROWS
-================================= */
-.item-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-/* ===============================
-   HEADER ROW (COLUMN LABELS)
-================================= */
-.header-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
-    gap: 8px;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
-
-/* ===============================
-   STICKY TOTAL BAR (BOTTOM RIGHT)
-================================= */
-.total-bar {
-    position: sticky;
-    bottom: 0;
-    background: #111;
-    padding: 10px;
-    text-align: right;
-    border-top: 2px solid var(--accent);
 }
 
 /* ===============================
@@ -230,18 +214,15 @@ input {
 /* ===============================
    ITEM GRID (TABLE STRUCTURE)
 ================================= */
-.item-row, .header-row {
+.item-row,
+.header-row,
+.bottom-panel {
     display: grid;
-    grid-template-columns: 
-        2fr   /* Item */
-        1fr   /* Base Wt */
-        1.5fr /* Seal */
-        1fr   /* Profit */
-        1fr   /* Wastage */
-        1fr   /* Stone */
-        1fr   /* Qty */
-        1fr   /* Final Wt */
-        1fr;  /* Type */
+
+    grid-template-columns:
+        minmax(140px, 2fr)  /* Item */
+        repeat(9, minmax(80px, 1fr));
+
     gap: 8px;
     align-items: center;
 }
@@ -250,9 +231,14 @@ input {
    PREVENT INPUT BREAKING GRID
 ================================= */
 .item-row input,
-.item-row button {
+.item-row button,
+.bottom-panel input,
+.bottom-panel button {
     width: 100%;
     min-width: 0;
+    box-sizing: border-box;
+    margin-top: 0;
+    margin-bottom: 6px;
 }
 
 /* ===============================
@@ -263,6 +249,8 @@ input {
     overflow-y: auto;
     max-height: 400px; /* adjust if needed */
     padding-right: 5px;
+    align-items: center;
+    min-height: 0;
 }
 
 /* ===============================
@@ -272,6 +260,9 @@ input {
     display: flex;
     flex-direction: column;
     height: 100%;
+    /* height: calc(100% - var(--bottom-panel-height)); */
+    min-height: 0;
+
 }
 
 /* ===============================
@@ -279,37 +270,83 @@ input {
 ================================= */
 .page.full {
     grid-column: 1 / -1;
-    width: 100%;
+    box-sizing: border-box;
+    min-height: 0;
+    padding: 0px;
 }
 
 /* ===============================
-   BOTTOM PANEL (FIXED INSIDE VIEW)
+   BOTTOM PANEL
 ================================= */
 .bottom-panel {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
 
     position: sticky;
     bottom: 0;
 
     background: #111;
-    padding: 10px;
+
     border-top: 2px solid var(--accent);
+
+    padding-top: 10px;
+
     margin-top: 10px;
+
+    z-index: 100;
 }
+
+/* ===============================
+   DISABLED TOTAL BOXES
+================================= */
+/* .bottom-panel input[disabled] {
+
+    background: #181818;
+
+    color: #fff;
+
+    border: 1px solid #555;
+
+    opacity: 1;
+
+    text-align: center;
+
+    font-weight: bold;
+
+    padding: 8px;
+} */
+
+/* ===============================
+   ACTION AREA
+================================= */
+/* .bottom-actions {
+
+    display: flex;
+
+    gap: 8px;
+
+    align-items: center;
+}
+
+.bottom-actions input {
+    width: 120px;
+} */
 
 /* ===============================
    LEFT SIDE (GOLD RATE + CASH)
 ================================= */
-.bottom-left {
+/* .bottom-left {
     display: flex;
     gap: 10px;
+    align-items: center;
 }
 
 .bottom-left input {
     width: 120px;
 }
+
+.bottom-left button {
+    margin-top: 0px;
+    margin-bottom: 6px;
+} */
 
 /* ===============================
    RIGHT SIDE (TOTALS)
@@ -322,7 +359,7 @@ input {
 }
 
 /* ===============================
-   TYPE BUTTON (BUY / SELL)
+   TYPE BUTTON (BUY / SALE)
 ================================= */
 .type-btn {
     border: none;
@@ -332,11 +369,11 @@ input {
     padding: 6px;
 }
 
-.type-btn.buy {
+.type-btn.BUY {
     background: #27ae60;
 }
 
-.type-btn.sell {
+.type-btn.SALE {
     background: #e74c3c;
 }
 
@@ -346,6 +383,7 @@ input {
 .header-row {
     font-weight: bold;
     margin-bottom: 8px;
+    align-items: center;
 }
 
 /* ===============================
@@ -357,4 +395,8 @@ input {
 
 #itemsContainer::-webkit-scrollbar-thumb {
     background: var(--accent);
+}
+
+.invisible_thingys {
+    visibility: hidden;
 }

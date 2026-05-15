@@ -27,9 +27,9 @@ const modules = {
             { id: "btnAP", label: "Andhra", action: "setLocation('AP')" }
         ],
         left: [
-            { id: "addBtn", label: "+ Add Entry", action: "addEntry()" },
-            { id: "editBtn", label: "Edit", action: "editSelected()" },
-            { id: "deleteBtn", label: "Delete", action: "deleteSelected()" },
+            { id: "addBtn", label: "+ Add Entry", action: "addTransaction()" },
+            { id: "editBtn", label: "Edit", action: "editTransaction()" },
+            { id: "deleteBtn", label: "Delete", action: "deleteTransaction()" },
             { id: "customer", label: "Customer", action: "selectButton(event)" , class: "customerbutton"},
             { id: "manufacturer", label: "Manufacturer", action: "selectButton(event)" , class: "manufacturerbutton"},
             { id: "wholesaler", label: "Wholesaler", action: "selectButton(event)" , class: "wholesalerbutton"},
@@ -229,22 +229,6 @@ function renderEntry() {
     });
 }
 
-/* ADD ENTRY */
-function addEntry() {
-    const newEntry = {
-        name: "",
-        oldBalance: 0,
-        items: []
-    };
-
-    data.unshift(newEntry);
-    renderEntry();
-
-    const firstCard = document.querySelector(".page");
-
-    openPage(firstCard, newEntry);
-}
-
 /* OPEN PAGE (FULL SCREEN EDIT) */
 function renderEntryEditView(d) {
     
@@ -263,11 +247,11 @@ function renderEntryEditView(d) {
         <div class="header-row">
             <div>Item</div>
             <div>Type</div>
-            <div>Qty</div>
+            <div>Seal</div>
             <div>Profit %</div>
             <div>Wastage %</div>
             <div>Stone</div>
-            <div>Seal</div>
+            <div>Qty</div>
         </div>
 
         <!-- ITEMS -->
@@ -310,94 +294,6 @@ function renderEntryEditView(d) {
 
 }
 
-
-/* ADD ITEM ROW */
-function addItemRow(item = {}) {
-    const container = document.getElementById("itemsContainer");
-
-    const div = document.createElement("div");
-    div.className = "item-row";
-
-    div.innerHTML = `
-        <input placeholder="Item" value="${item.item_name || ""}">
-
-        <input type="number" placeholder="Base Wt" value="${item.base_weight || ""}">
-
-        <input placeholder="Seal" value="${item.seal_name || ""}">
-
-        <input type="number" placeholder="Profit %" value="${item.profit_percent || ""}">
-        <input type="number" placeholder="Wastage %" value="${item.wastage_percent || ""}">
-        <input type="number" placeholder="Stone" value="${item.stone_less || ""}">
-
-        <input type="number" placeholder="Qty" value="${item.quantity || ""}">
-
-        <input type="number" placeholder="Final Wt" value="${item.final_weight || ""}">
-
-        <button class="type-btn ${item.type === "SELL" ? "sell" : "buy"}">
-            ${item.type === "SELL" ? "SELL" : "BUY"}
-        </button>
-    `;
-
-    // 🔥 Toggle logic
-    const btn = div.querySelector(".type-btn");
-
-    btn.addEventListener("click", () => {
-        if (btn.innerText === "BUY") {
-            btn.innerText = "SELL";
-            btn.classList.remove("buy");
-            btn.classList.add("sell");
-        } else {
-            btn.innerText = "BUY";
-            btn.classList.remove("sell");
-            btn.classList.add("buy");
-        }
-    });
-
-    container.appendChild(div);
-}
-
-/* SAVE */
-function saveEntry() {
-    const d = selectedPage.d;
-
-    d.name = document.getElementById("name").value;
-    d.oldBalance = parseFloat(document.getElementById("oldBalance").value || 0);
-
-    const rows = document.querySelectorAll("#itemsContainer > div");
-
-    let totalQty = 0;
-    let items = [];
-
-    rows.forEach(r => {
-        const inputs = r.querySelectorAll("input");
-
-        const item = {
-            name: inputs[0].value,
-            qty: parseFloat(inputs[1].value || 0),
-            profit: parseFloat(inputs[2].value || 0),
-            wastage: parseFloat(inputs[3].value || 0),
-            stone: parseFloat(inputs[4].value || 0)
-        };
-
-        totalQty += item.qty;
-        items.push(item);
-    });
-
-    const cash = parseFloat(document.getElementById("cash").value || 0);
-
-    d.items = items;
-    d.totalQty = totalQty;
-    d.finalBalance = d.oldBalance + totalQty * 100 + cash;
-    d.date = new Date().toLocaleString();
-
-    resetEntryView();
-}
-
-/* CANCEL */
-function cancelEntry() {
-    resetEntryView();
-}
-
 /* RESET */
 function resetEntryView() {
     selectedPage = null;
@@ -418,17 +314,6 @@ function setLocation(loc) {
         AP:"#2980b9"
     };
     document.documentElement.style.setProperty('--accent', colors[loc]);
-}
-
-function openPage(el, d) {
-    selectedPage = { el, d };
-
-    document.querySelectorAll(".page").forEach(p => p.style.display = "none");
-
-    el.style.display = "block";
-    el.classList.add("full");
-
-    renderEntryEditView(d);
 }
 
 function editSelected() {
@@ -545,5 +430,15 @@ function set_current_mode(){
     }
 }
 
+function logout() {
+    // remove token
+    localStorage.removeItem("token");
+    // disconnect socket
+    socket.disconnect();
+    // go to login page
+    window.location.href = "/login";
+}
+
 /* INIT */
 // renderEntry();
+

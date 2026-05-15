@@ -46,7 +46,7 @@ def login():
         if not bcrypt.check_password_hash(user.password_hash, password):
             return jsonify({"msg": "Invalid"}), 401
 
-        token = create_access_token(identity=user.username,expires_delta=timedelta(hours=5))
+        token = create_access_token(identity=user.username,expires_delta=timedelta(hours=3))
 
         return jsonify({
             "token": token,
@@ -525,7 +525,7 @@ def getTransaction(data=None):
         return
     db = SessionLocal()
     try:
-        transactions = db.query(models.Transaction).all()
+        transactions = db.query(models.Transaction).order_by(models.Transaction.created_at.desc()).all()
         transactionData = []
         for bill in transactions:
             entity_id = bill.entity_id
@@ -551,6 +551,355 @@ def getTransaction(data=None):
         emit("error",{"message":"All Transaction Error!!"})
     finally:
         db.close()
+
+@socketio.on("saveTransaction")
+def saveTransaction(data):
+    print(data)
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    db = SessionLocal()
+    try:
+        decoded = decode_token(token)
+        current_user = decoded["sub"]
+        user = db.query(models.Users).filter_by(username=current_user).first()
+        current_user_id = user.id
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    try:
+        entity_id = db.query(models.Entities).filter_by(name=data.get("name")).first().id
+        time = datetime.now(ZoneInfo("Asia/Kolkata"))
+        newTransaction = models.Transaction(
+            entity_id = entity_id,
+            old_balance = data.get("old_balance"),
+            new_balance = data.get("new_balance"),
+            base_weight = data.get("base_weight"),
+            final_weight = data.get("final_weight"),
+            cash = data.get("cash"),
+            gold_rate = data.get("gold_rate"),
+            created_at = time,
+            updated_at = time,
+            created_by=current_user_id,
+        )
+        db.add(newTransaction)
+        db.commit()
+        db.refresh(newTransaction)
+
+        refresh_oldbalance(entity_id,data.get("new_balance",None))
+
+        items = data.get("items")
+        transaction_id = db.query(models.Transaction).filter_by(created_at=time).first().id
+        
+        #{'itemname': '', 'baseweight': 0, 'seal': 0, 
+        # 'profit': 0, 'wastage': 0, 'stone': 0, 
+        # 'qty': 0, 'finalweight': 0, 'type': 'SELL'}]
+        for item in items:
+            item_id = db.query(models.Item).filter_by(name=item.get("itemname")).first().id
+            type = item.get("type")
+            if type == "BUY":
+                type = "PURCHASE"
+            seal = db.query(models.Entities).filter_by(name=item.get("seal","")).first().id
+            newTransactionItem = models.TransactionItem(
+                transaction_id = transaction_id,
+                item_id = item_id,
+                touch = item.get("touch",92),
+                seal = seal,
+                profit_percent = item.get("profit",0),
+                wastage_percent = item.get("wastage",0),
+                stone_less = item.get("stone",0),
+                type = models.TransactionType[type],
+                quantity = item.get("qty",0),
+                base_weight = item.get("baseweight"),
+                final_weight = item.get("finalweight"),
+                created_by = current_user_id,
+            )
+            db.add(newTransactionItem)
+            db.commit()
+            db.refresh(newTransactionItem)
+
+        new_balance_function, flag = calculate_new_balance(data.get("old_balance"),data.get("items"))
+        if flag==False:
+            print("Error in Total Checking!!")
+            socketio.emit("error",{"message":"Error in the Total compared from front-end and back-end!!"})
+            socketio.emit("openEditTransaction",transaction_id)
+            #### Under Construction in saveTransaction too
+        refresh_oldbalance(entity_id,data.get("new_balance"))
+        socketio.emit("saveTransactionOk",{})
+    
+    except Exception as e:
+        print("Error:",e)
+        socketio.emit("error",{"message":"Error At Save Transaction!!"})
+    finally:
+        db.close()
+
+
+def refresh_oldbalance(id,balance=None):
+    try:
+        db = SessionLocal()
+        if balance==None:
+            latest_data = db.query(models.Transaction).filter_by(entity_id=id).order_by(models.Transaction.created_at.desc()).first()
+            updated_balance = latest_data.new_balance
+            update_time = datetime.now(ZoneInfo("Asia/Kolkata"))
+            entity = db.query(models.Entities).filter_by(id=id).first()
+            if entity:
+                entity.balance = updated_balance
+                entity.updated_at = update_time
+            db.commit()
+        else:
+            updated_balance = balance
+            update_time = datetime.now(ZoneInfo("Asia/Kolkata"))
+            entity = db.query(models.Entities).filter_by(id=id).first()
+            if entity:
+                entity.balance = updated_balance
+                entity.updated_at = update_time
+            db.commit()
+
+    except Exception as e:
+        print("Error:",e)
+    finally:
+        db.close()
+
+# {'itemname': 'Casting Rings', 'baseweight': 100,
+#  'touch': 92, 'seal': 'Narendran', 'profit': 0, 
+# 'wastage': 3, 'stone': 0, 'qty': '1', 
+# 'finalweight': 0, 'type': 'BUY'}
+
+def calculate_final_per_item(item):
+    try:
+        baseweight = float(item.get("baseweight"))
+        touch = float(item.get("touch"))
+        profit = float(item.get("profit"))
+        wastage = float(item.get("wastage"))
+        stone = float(item.get("stone"))
+        finalweight = float(item.get("finalweight"))
+        item_type = item.get("type")
+        if abs(wastage) > 0.0001:
+            stoneless = baseweight - stone
+            final = stoneless*((100+wastage)/100)
+            if touch == 92:
+                final = final*91.7/100
+            else:
+                final = final*touch/100
+            return_value = 0
+            return_bool = True
+            if abs(final - finalweight) < 0.0001:
+                return_value, return_bool = finalweight,True
+            else:
+                return_value, return_bool = final,False
+            if item_type=="BUY":
+                return -1*return_value, return_bool
+            return return_value, return_bool
+        else:
+            stoneless = baseweight - stone
+            total_touch = (touch + profit)/100
+            final = stoneless*total_touch
+            return_value = 0
+            return_bool = True
+            if abs(final - finalweight) < 0.0001:
+                return_value, return_bool = finalweight,True
+            else:
+                return_value, return_bool = final,False
+            if item_type=="BUY":
+                return -1*return_value, return_bool
+            return return_value, return_bool
+    except Exception as e:
+        print("Error:",e,"at Calculate Final Per Item")
+        return 0,False
+
+def calculate_new_balance(old_balance,items):
+    try:
+        totalWeight = 0
+        for item in items:
+            weight,flag = calculate_final_per_item(item)
+            if flag:
+                totalWeight += weight
+            else:
+                return 0,False
+        return old_balance + totalWeight,True
+    except Exception as e:
+        print("Error:",e,"at Calculate New Balance")
+        return 0,False
+    
+@socketio.on("triggerEditTransactionSequence")
+def trigerEditTransactionSequence(data):
+    if not data:
+        emit("error", {"msg": "no data received"})
+        return
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    token = str(token)
+    try:
+        decoded = decode_token(token)
+        username = decoded["sub"]
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    db = SessionLocal()
+    try:
+        bill = db.query(models.Transaction).filter_by(id=data.get("id")).first()
+        entity_id = bill.entity_id
+        entity_name = db.query(models.Entities).filter_by(id=entity_id).first().name
+        entity_location = db.query(models.Entities).filter_by(id=entity_id).first().location
+        entity_type = db.query(models.Entities).filter_by(id=entity_id).first().type
+        items = db.query(models.TransactionItem).filter_by(transaction_id=data.get("id")).all()
+        items_data = []
+        for item in items:
+            item_name = db.query(models.Item).filter_by(id=item.item_id).first().name
+            seal_name = db.query(models.Entities).filter_by(id=item.seal).first().name
+            items_data.append({
+                "id": item.id,
+                "item_name": item_name,
+                "touch": item.touch,
+                "seal": seal_name,
+                "profit_percent": item.profit_percent,
+                "wastage_percent": item.wastage_percent,
+                "stone_less": item.stone_less,
+                "type": item.type.name,
+                "quantity": item.quantity,
+                "base_weight": item.base_weight,
+                # "final_weight": item.final_weight,
+                # "created_by": item.created_by,
+            })
+        transactionData = {
+            "id": bill.id,
+            "name": entity_name,
+            "old_balance": bill.old_balance,
+            "new_balance": bill.new_balance,
+            "base_weight": bill.base_weight,
+            "final_weight": bill.final_weight,
+            "created_at": str(bill.created_at),
+            "updated_at": str(bill.updated_at),
+            # "created_by": bill.created_by,
+            "location": entity_location,
+            "type": entity_type.name,
+            "items": items_data,
+        }
+        print(transactionData)
+        emit("triggerEditTransactionSequenceFromServer",transactionData)
+    except Exception as e:
+        print("Error: ",e)
+        import traceback
+        traceback.print_exc()
+        emit("error",{"message":"Edit Transaction Error!!"})
+    finally:
+        db.close()
+
+@socketio.on("saveEditTransaction")
+def saveEditTransaction(data):
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    db = SessionLocal()
+    try:
+        decoded = decode_token(token)
+        current_user = decoded["sub"]
+        user = db.query(models.Users).filter_by(username=current_user).first()
+        current_user_id = user.id
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    try:
+        transaction_id = data.get("id")
+        transaction = db.query(models.Transaction).filter_by(id=transaction_id).first()
+        entity_id = db.query(models.Entities).filter_by(name=data.get("name")).first().id
+        if transaction:
+            transaction.entity_id = entity_id
+            transaction.old_balance = data.get("old_balance"),
+            transaction.new_balance = data.get("new_balance"),
+            transaction.base_weight = data.get("base_weight"),
+            transaction.final_weight = data.get("final_weight"),
+            transaction.cash = data.get("cash"),
+            transaction.gold_rate = data.get("gold_rate"),
+            transaction.updated_at = datetime.now(ZoneInfo("Asia/Kolkata")),
+        db.commit()
+
+        items = data.get("items")
+        
+        #{'itemname': '', 'baseweight': 0, 'seal': 0, 
+        # 'profit': 0, 'wastage': 0, 'stone': 0, 
+        # 'qty': 0, 'finalweight': 0, 'type': 'SELL'}]
+        for item in items:
+            item_id = db.query(models.Item).filter_by(name=item.get("itemname")).first().id
+            item_type = item.get("type").upper()
+            if item_type == "BUY":
+                item_type = "PURCHASE"
+            seal = db.query(models.Entities).filter_by(name=item.get("seal","")).first().id
+            transactionItem = db.query(models.TransactionItem).filter_by(id=item.get("id")).first()
+            if transactionItem:
+                transactionItem.item_id = item_id
+                transactionItem.touch = item.get("touch")
+                transactionItem.seal = seal
+                transactionItem.profit_percent = item.get("profit")
+                transactionItem.wastage_percent = item.get("wastage")
+                transactionItem.stone_less = item.get("stone")
+                transactionItem.type = models.TransactionType[item_type]
+                transactionItem.quantity = item.get("qty",0)
+                transactionItem.base_weight = item.get("baseweight")
+                transactionItem.final_weight = item.get("finalweight")
+                # transactionItem.created_by = current_user_id
+            db.commit()
+        new_balance_function, flag = calculate_new_balance(data.get("old_balance"),data.get("items"))
+        if flag==False:
+            print("Error in Total Checking!!")
+            socketio.emit("error",{"message":"Error in the Total compared from front-end and back-end!!"})
+            socketio.emit("openEditTransaction",transaction_id)
+            #### Under Construction in saveTransaction too
+        refresh_oldbalance(entity_id,data.get("new_balance"))
+        socketio.emit("saveEditTransactionOk",{})
+    
+    except Exception as e:
+        print("Error:",e)
+        # import traceback
+        # traceback.print_exc()
+        socketio.emit("error",{"message":"Error At Save Edit Transaction!!"})
+    finally:
+        db.close()
+
+@socketio.on("deleteTransaction")
+def deleteTransaction(data):
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    db = SessionLocal()
+    try:
+        decoded = decode_token(token)
+        current_user = decoded["sub"]
+        user = db.query(models.Users).filter_by(username=current_user).first()
+        current_user_id = user.id
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    try:
+        id = data.get("id")
+        items = db.query(models.TransactionItem).filter_by(transaction_id=id).all()
+        for item in items:
+            db.delete(item)
+            db.commit()
+        transaction = db.query(models.Transaction).filter_by(id=id).first()
+        if transaction:
+            db.delete(transaction)
+            db.commit()
+        socketio.emit("deleteTransactionOk",{})
+    except Exception as e:
+        print("Error:",e)
+        socketio.emit("error",{"message":"Error At Delete Transaction!!"})
+    finally:
+        db.close()
+
 
 if __name__=="__main__":
     socketio.run(app,debug=True,port=5000)
