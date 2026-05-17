@@ -439,6 +439,147 @@ function logout() {
     window.location.href = "/login";
 }
 
+/* AUTO COMPLETE THINGY START */
+const autocompleteRegistry = {};
+
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function setupAutocomplete(inputId, type, callback = null) {
+
+    const input = document.getElementById(inputId);
+    const dropdown = document.getElementById(`${inputId}Dropdown`);
+
+    if (!input || !dropdown) return;
+
+    const typeName = capitalize(type);
+
+    const searchEvent = `search${typeName}`;
+    const resultsEvent = `${typeName}Results`;
+    console.log(searchEvent);
+    console.log(resultsEvent);
+
+    let activeIndex = -1;
+    let currentList = [];
+
+    function clearDropdown() {
+        dropdown.innerHTML = "";
+        activeIndex = -1;
+    }
+
+    function selectItem(item) {
+
+        // 🔥 what appears in input box
+        // input.value = item.name || item.location || item.value || "";
+
+        clearDropdown();
+
+        // 🔥 trigger custom callback
+        if (callback && typeof callback === "function") {
+            callback(input,item,type);
+        }
+    }
+
+    function renderList(list = []) {
+
+        currentList = list;
+
+        clearDropdown();
+
+        list.forEach((item, index) => {
+
+            const div = document.createElement("div");
+
+            // 🔥 text shown in dropdown
+            // div.innerText =
+            //     item.name ||
+            //     item.location ||
+            //     item.value ||
+            //     "Unknown";
+            div.innerText = item[type];
+
+            div.onclick = () => {
+                selectItem(item);
+            };
+
+            div.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+            });
+
+            dropdown.appendChild(div);
+        });
+    }
+
+    function onInput() {
+
+        socket.emit(searchEvent, {
+            token: localStorage.getItem("token"),
+            value: input.value,
+            created_at: input.dataset.created_at,
+        });
+    }
+
+    function onKeyDown(e) {
+
+        const items = dropdown.querySelectorAll("div");
+
+        if (!items.length) return;
+
+        if (e.key === "ArrowDown") {
+
+            e.preventDefault();
+
+            activeIndex = (activeIndex + 1) % items.length;
+
+            updateHighlight(items, activeIndex);
+        }
+
+        if (e.key === "ArrowUp") {
+
+            e.preventDefault();
+
+            activeIndex =
+                (activeIndex - 1 + items.length) % items.length;
+
+            updateHighlight(items, activeIndex);
+        }
+
+        if (e.key === "Enter") {
+
+            e.preventDefault();
+
+            if (activeIndex >= 0) {
+
+                selectItem(currentList[activeIndex]);
+            }
+        }
+    }
+
+    input.addEventListener("input", onInput);
+
+    input.addEventListener("keydown", onKeyDown);
+
+    dropdown.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+    });
+
+    // 🔥 remove old listener
+    if (autocompleteRegistry[resultsEvent]) {
+
+        socket.off(
+            resultsEvent,
+            autocompleteRegistry[resultsEvent]
+        );
+    }
+
+    autocompleteRegistry[resultsEvent] = renderList;
+
+    socket.on(resultsEvent, renderList);
+}
+
+/* AUTO COMPLETE THINGY END */
+
 /* INIT */
 // renderEntry();
 

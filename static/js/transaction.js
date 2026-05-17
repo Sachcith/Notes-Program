@@ -20,9 +20,9 @@ socket.on("transactionData",(e)=>{
 
             div.innerHTML = `
                 <b>${d.name}</b><br>
-                Old Balance: ${d.old_balance}<br>
-                Final Weight: ${d.final_weight}<br>
-                New Balance: ${d.new_balance}<br>
+                Old Balance: ${parseFloat(d.old_balance.toFixed(3))}<br>
+                Final Weight: ${parseFloat(d.final_weight.toFixed(3))}<br>
+                New Balance: ${parseFloat(d.new_balance.toFixed(3))}<br>
                 <small>${d.created_at}</small>
             `;
 
@@ -39,7 +39,13 @@ function addTransaction() {
 
             <h2>Add Transaction</h2>
 
-            <input id="name" placeholder="Entity Name" value="${current_name}">
+
+            <label>Name</label>
+            <div class="input-wrapper">
+                <input id="name" placeholder="Enter name" value="${current_name}" autocomplete="off">
+                <div id="nameDropdown" class="dropdown"></div>
+            </div>
+
             <h3> Old Balance: <b id="old_balance"> 0 </b> </h3>
 
             <div class="header-row">
@@ -104,19 +110,26 @@ function addTransaction() {
                 
                 <h3> New </h3>
                 <h3> Balance: </h3>
-                <h3> <b id="new_balance"> 0 </b> </h3>
+                <h3> <b id="new_balance"> - </b> </h3>
 
 
             </div>
         </div>
     `;
     addItemRow();
+
+    setupAutocomplete("name","transactionEntityName",(input,item,type)=>{
+        input.value = item[type];
+        const old_balance = parseFloat(item["old_balance"] || 0);
+        document.getElementById("old_balance").innerHTML = parseFloat(old_balance.toFixed(3) || 0);
+        document.getElementById("old_balance").dataset.realValue = old_balance;
+    });
 }
 
 /* SAVE */
 function saveTransaction() {
     const name = document.getElementById("name").value;
-    const old_balance = parseFloat(document.getElementById("old_balance").value || 0);
+    const old_balance = parseFloat(document.getElementById("old_balance").dataset.realValue || 0);
 
     const rows = document.querySelectorAll(".item-row");
 
@@ -140,6 +153,7 @@ function saveTransaction() {
             qty: inputs[7].value || 0,
             finalweight: parseFloat(inputs[8].dataset.realValue || 0),
             type: buttons[0].innerText,
+            cash: parseFloat(inputs[9].value || 0),
         };
 
         // totalQty += item.qty;
@@ -147,11 +161,11 @@ function saveTransaction() {
         // totalBase += parseFloat(inputs[1].value || 0);
         items.push(item);
     });
-    totalBase = document.getElementById("bottomBaseWeight").dataset.realValue;
-    totalQty = document.getElementById("bottomQty").dataset.realValue;
-    totalWeight = document.getElementById("bottomFinalWeight").dataset.realValue;
+    totalBase = parseFloat(document.getElementById("bottomBaseWeight").dataset.realValue || 0);
+    totalQty = parseFloat(document.getElementById("bottomQty").dataset.realValue || 0);
+    totalWeight = parseFloat(document.getElementById("bottomFinalWeight").dataset.realValue || 0);
     const cash = parseFloat(document.getElementById("cash").value || 0);
-    const goldRate = parseFloat(document.getElementById("goldRate").value);
+    const goldRate = parseFloat(document.getElementById("goldRate").value || 0);
 
     const data = {
         token: localStorage.getItem("token"),
@@ -200,6 +214,10 @@ function addItemRow(item = {}) {
         <button class="type-btn ${item.type === "SALE" ? "SALE" : "BUY"}">
             ${item.type === "SALE" ? "SALE" : "BUY"}
         </button>
+
+        <input type="number" placeholder="Cash" value="${item.cash || ""}">
+
+        <button class="delete-button"> Delete </button>
     `;
 
     // 🔥 Toggle logic
@@ -245,6 +263,16 @@ function addItemRow(item = {}) {
     // End of Logic for Either Profit or Wastage
     
     container.appendChild(div);
+
+    const delete_button = div.querySelector(".delete-button");
+
+    delete_button.addEventListener("click",()=>{
+        div.remove();
+
+        const rows = document.querySelectorAll(".item-row");
+        calculate_global_final_values(rows);
+    });
+
     return div;
 }
 
@@ -462,13 +490,14 @@ function calculate_final_value(inputs){
         final = stoneless*total_touch;
     }
     inputs[8].dataset.realValue = final;
-    inputs[8].value = final.toFixed(3);
+    inputs[8].value = parseFloat(final.toFixed(3));
 }
 
 function calculate_global_final_values(rows){
-    let total_base = 0;
-    let total_qty = 0;
-    let total_final = 0;
+    console.log("global");
+    let total_base = parseFloat(0);
+    let total_qty = parseFloat(0);
+    let total_final = parseFloat(0);
     rows.forEach(row => {
         const inputs = row.querySelectorAll("input");
         calculate_final_value(inputs);
@@ -486,20 +515,20 @@ function calculate_global_final_values(rows){
     });
     let bottomBase = document.getElementById("bottomBaseWeight");
     bottomBase.dataset.realValue = total_base;
-    bottomBase.value = total_base.toFixed(3);
+    bottomBase.value = parseFloat(total_base.toFixed(3));
 
     let bottomQuantity = document.getElementById("bottomQty");
     bottomQuantity.dataset.realValue = total_qty;
-    bottomQuantity.value = total_qty.toFixed(0);
+    bottomQuantity.value = parseFloat(total_qty.toFixed(0));
 
     let bottomFinal = document.getElementById("bottomFinalWeight");
     bottomFinal.dataset.realValue = total_final;
-    bottomFinal.value = total_final.toFixed(3);
+    bottomFinal.value = parseFloat(total_final.toFixed(3));
 
     let bottomNewBalance = document.getElementById("new_balance");
-    let old_balance = parseFloat(document.getElementById("old_balance").innerHTML);
+    let old_balance = parseFloat(document.getElementById("old_balance").dataset.realValue || 0);
     let new_balance = old_balance + total_final;
-    bottomNewBalance.innerHTML = new_balance.toFixed(3);
+    bottomNewBalance.innerHTML = parseFloat(new_balance.toFixed(3));
 }
 
 
@@ -514,7 +543,13 @@ socket.on("triggerEditTransactionSequenceFromServer",(data)=>{
 
             <h2>Edit Transaction</h2>
 
-            <input id="name" placeholder="Entity Name" value="${current_name}">
+
+            <label>Name</label>
+            <div class="input-wrapper">
+                <input id="name" placeholder="Enter name" autocomplete="off">
+                <div id="nameDropdown" class="dropdown"></div>
+            </div>
+
             <h3> Old Balance: <b id="old_balance"> 0 </b> </h3>
 
             <div class="header-row">
@@ -579,7 +614,7 @@ socket.on("triggerEditTransactionSequenceFromServer",(data)=>{
                 
                 <h3> New </h3>
                 <h3> Balance: </h3>
-                <h3> <b id="new_balance"> 0 </b> </h3>
+                <h3> <b id="new_balance"> - </b> </h3>
 
 
             </div>
@@ -588,11 +623,15 @@ socket.on("triggerEditTransactionSequenceFromServer",(data)=>{
     // addItemRow();
     document.getElementById("name").value = data.name;
     document.getElementById("name").dataset.id = data.id;
-    document.getElementById("old_balance").innerHTML = data.old_balance;
+    document.getElementById("name").dataset.created_at = data.created_at;
+    document.getElementById("name").dataset.name_backup = data.name;
+    document.getElementById("old_balance").innerHTML = parseFloat(data.old_balance.toFixed(3) || 0);
+    document.getElementById("old_balance").dataset.realValue = data.old_balance;
+    document.getElementById("old_balance").dataset.backup = data.old_balance;
     document.getElementById("new_balance").innerHTML = data.new_balance;
-    // document.getElementById("bottomBaseWeight").value = data.base_weight.toFixed(3);
+    // document.getElementById("bottomBaseWeight").value = parseFloat(data.base_weight.toFixed(3));
     // document.getElementById("bottomBaseWeight").dataset.realValue = dataset.base_weight;
-    // document.getElementById("bottomFinalWeight").value = data.final_weight.toFixed(3);
+    // document.getElementById("bottomFinalWeight").value = parseFloat(data.final_weight.toFixed(3));
     // document.getElementById("bottomFinalWeight").dataset.realValue = data.final_weight;
     const item_data = data.items;
 
@@ -601,11 +640,18 @@ socket.on("triggerEditTransactionSequenceFromServer",(data)=>{
     });
     const rows = document.querySelectorAll(".item-row");
     calculate_global_final_values(rows);
+
+    setupAutocomplete("name","transactionEntityName",(input,item,type)=>{
+        input.value = item[type];
+        const old_balance = parseFloat(item["old_balance"] || 0);
+        document.getElementById("old_balance").innerHTML = parseFloat(old_balance.toFixed(3) || 0);
+        document.getElementById("old_balance").dataset.realValue = old_balance;
+    });
 });
 
 function saveEditTransaction(){
     const name = document.getElementById("name").value;
-    const old_balance = parseFloat(document.getElementById("old_balance").value || 0);
+    const old_balance = parseFloat(document.getElementById("old_balance").dataset.realValue || 0);
 
     const rows = document.querySelectorAll(".item-row");
 
@@ -627,9 +673,10 @@ function saveEditTransaction(){
             profit: parseFloat(inputs[4].value || 0),
             wastage: parseFloat(inputs[5].value || 0),
             stone: parseFloat(inputs[6].value || 0),
-            qty: inputs[7].value || 0,
+            qty: parseFloat(inputs[7].value || 0),
             finalweight: parseFloat(inputs[8].dataset.realValue || 0),
             type: buttons[0].innerText,
+            cash: parseFloat(inputs[9].value || 0),
         };
 
         // totalQty += item.qty;
@@ -637,17 +684,19 @@ function saveEditTransaction(){
         // totalBase += parseFloat(inputs[1].value || 0);
         items.push(item);
     });
-    totalBase = document.getElementById("bottomBaseWeight").dataset.realValue;
-    totalQty = document.getElementById("bottomQty").dataset.realValue;
-    totalWeight = document.getElementById("bottomFinalWeight").dataset.realValue;
+    totalBase = parseFloat(document.getElementById("bottomBaseWeight").dataset.realValue || 0);
+    totalQty = parseFloat(document.getElementById("bottomQty").dataset.realValue || 0);
+    totalWeight = parseFloat(document.getElementById("bottomFinalWeight").dataset.realValue || 0);
     const cash = parseFloat(document.getElementById("cash").value || 0);
-    const goldRate = parseFloat(document.getElementById("goldRate").value);
+    const goldRate = parseFloat(document.getElementById("goldRate").value || 0);
 
     const data = {
         token: localStorage.getItem("token"),
         id: document.getElementById("name").dataset.id,
         name: name,
         old_balance: old_balance,
+        old_balance_backup: document.getElementById("old_balance").dataset.backup,
+        backup_name: document.getElementById("name").dataset.name_backup,
         new_balance: old_balance + totalWeight,
         base_weight: totalBase,
         final_weight: totalWeight,
@@ -675,6 +724,7 @@ function deleteTransaction(){
     socket.emit("deleteTransaction",{
         token: localStorage.getItem("token"),
         id:selectedPage.d.id,
+        old_balance:selectedPage.d.old_balance,
     });
 }
 

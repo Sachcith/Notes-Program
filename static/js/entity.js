@@ -71,127 +71,133 @@ function addEntity(){
     `;
     set_current_mode();
     unlock = false;
-    const nameInput = document.getElementById("name");
-    const nameDropdown = document.getElementById("nameDropdown");
-
-    nameInput.addEventListener("input", () => {
-        const value = nameInput.value;
-
-        socket.emit("searchEntityName", {
-            token: localStorage.getItem("token"),
-            value: value
-        });
+    setupAutocomplete("name","entityName",(input,item,type)=>{
+        input.value = item[type];
     });
-
-    const locationInput = document.getElementById("location");
-    const locationDropdown = document.getElementById("locationDropdown");
-
-    locationInput.addEventListener("input", () => {
-        const value = locationInput.value;
-
-        socket.emit("searchEntityLocation", {
-            token: localStorage.getItem("token"),
-            value: value
-        });
+    setupAutocomplete("location","entityLocation",(input,item,type)=>{
+        input.value = item[type];
     });
+    // const nameInput = document.getElementById("name");
+    // const nameDropdown = document.getElementById("nameDropdown");
 
-    let activeIndex = -1;
-    let currentList = [];
+    // nameInput.addEventListener("input", () => {
+    //     const value = nameInput.value;
 
-    socket.on("entityNameResults", (list) => {
-        currentList = list;
-        activeIndex = -1;
-        nameDropdown.innerHTML = "";
+    //     socket.emit("searchEntityName", {
+    //         token: localStorage.getItem("token"),
+    //         value: value
+    //     });
+    // });
 
-        list.forEach((item, index) => {
-            const div = document.createElement("div");
-            div.innerText = item;
+    // const locationInput = document.getElementById("location");
+    // const locationDropdown = document.getElementById("locationDropdown");
 
-            div.onclick = () => {
-                nameInput.value = item;
-                nameDropdown.innerHTML = "";
-            };
+    // locationInput.addEventListener("input", () => {
+    //     const value = locationInput.value;
 
-            nameDropdown.appendChild(div);
-        });
-    });
+    //     socket.emit("searchEntityLocation", {
+    //         token: localStorage.getItem("token"),
+    //         value: value
+    //     });
+    // });
 
-    nameInput.addEventListener("keydown", (e) => {
-        const items = nameDropdown.querySelectorAll("div");
+    // let activeIndex = -1;
+    // let currentList = [];
 
-        if (!items.length) return;
+    // socket.on("entityNameResults", (list) => {
+    //     currentList = list;
+    //     activeIndex = -1;
+    //     nameDropdown.innerHTML = "";
 
-        if (e.key === "ArrowDown") {
-            e.preventDefault();
-            activeIndex = (activeIndex + 1) % items.length;
-            updateHighlight(items, activeIndex); // ✅ FIX
-        }
+    //     list.forEach((item, index) => {
+    //         const div = document.createElement("div");
+    //         div.innerText = item;
 
-        if (e.key === "ArrowUp") {
-            e.preventDefault();
-            activeIndex = (activeIndex - 1 + items.length) % items.length;
-            updateHighlight(items, activeIndex); // ✅ FIX
-        }
+    //         div.onclick = () => {
+    //             nameInput.value = item;
+    //             nameDropdown.innerHTML = "";
+    //         };
 
-        if (e.key === "Enter") {
-            e.preventDefault();
-            if (activeIndex >= 0) {
-                nameInput.value = items[activeIndex].innerText;
-                nameDropdown.innerHTML = "";
-            }
-        }
-    });
+    //         nameDropdown.appendChild(div);
+    //     });
+    // });
 
-    let locationActiveIndex = -1;
+    // nameInput.addEventListener("keydown", (e) => {
+    //     const items = nameDropdown.querySelectorAll("div");
 
-    socket.on("entityLocationResults", (list) => {
-        locationActiveIndex = -1;
-        locationDropdown.innerHTML = "";
+    //     if (!items.length) return;
 
-        list.forEach((item, index) => {
-            const div = document.createElement("div");
-            div.innerText = item;
+    //     if (e.key === "ArrowDown") {
+    //         e.preventDefault();
+    //         activeIndex = (activeIndex + 1) % items.length;
+    //         updateHighlight(items, activeIndex); // ✅ FIX
+    //     }
 
-            div.onclick = () => {
-                locationInput.value = item;
-                locationDropdown.innerHTML = "";
-            };
+    //     if (e.key === "ArrowUp") {
+    //         e.preventDefault();
+    //         activeIndex = (activeIndex - 1 + items.length) % items.length;
+    //         updateHighlight(items, activeIndex); // ✅ FIX
+    //     }
 
-            locationDropdown.appendChild(div);
-        });
-    });
+    //     if (e.key === "Enter") {
+    //         e.preventDefault();
+    //         if (activeIndex >= 0) {
+    //             nameInput.value = items[activeIndex].innerText;
+    //             nameDropdown.innerHTML = "";
+    //         }
+    //     }
+    // });
 
-    locationInput.addEventListener("keydown", (e) => {
-        const items = locationDropdown.querySelectorAll("div");
+    // let locationActiveIndex = -1;
 
-        if (!items.length) return;
+    // socket.on("entityLocationResults", (list) => {
+    //     locationActiveIndex = -1;
+    //     locationDropdown.innerHTML = "";
 
-        if (e.key === "ArrowDown") {
-            e.preventDefault();
-            locationActiveIndex = (locationActiveIndex + 1) % items.length;
-            updateHighlight(items, locationActiveIndex);
-        }
+    //     list.forEach((item, index) => {
+    //         const div = document.createElement("div");
+    //         div.innerText = item;
 
-        if (e.key === "ArrowUp") {
-            e.preventDefault();
-            locationActiveIndex = (locationActiveIndex - 1 + items.length) % items.length;
-            updateHighlight(items, locationActiveIndex);
-        }
+    //         div.onclick = () => {
+    //             locationInput.value = item;
+    //             locationDropdown.innerHTML = "";
+    //         };
 
-        if (e.key === "Enter") {
-            e.preventDefault();
-            if (locationActiveIndex >= 0) {
-                locationInput.value = items[locationActiveIndex].innerText;
-                locationDropdown.innerHTML = "";
-            }
-        }
-    });
+    //         locationDropdown.appendChild(div);
+    //     });
+    // });
 
-    locationDropdown.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-    });
+    // locationInput.addEventListener("keydown", (e) => {
+    //     const items = locationDropdown.querySelectorAll("div");
+
+    //     if (!items.length) return;
+
+    //     if (e.key === "ArrowDown") {
+    //         e.preventDefault();
+    //         locationActiveIndex = (locationActiveIndex + 1) % items.length;
+    //         updateHighlight(items, locationActiveIndex);
+    //     }
+
+    //     if (e.key === "ArrowUp") {
+    //         e.preventDefault();
+    //         locationActiveIndex = (locationActiveIndex - 1 + items.length) % items.length;
+    //         updateHighlight(items, locationActiveIndex);
+    //     }
+
+    //     if (e.key === "Enter") {
+    //         e.preventDefault();
+    //         if (locationActiveIndex >= 0) {
+    //             locationInput.value = items[locationActiveIndex].innerText;
+    //             locationDropdown.innerHTML = "";
+    //         }
+    //     }
+    // });
+
+    // locationDropdown.addEventListener("mousedown", (e) => {
+    //     e.preventDefault();
+    // });
     
-    document.getElementById("name").focus();
+    // document.getElementById("name").focus();
 }
 
 function updateHighlight(items, index){
@@ -256,127 +262,133 @@ function editEntity() {
 
     set_current_mode();
     unlock = false;
-
-    const nameInput = document.getElementById("name");
-    const nameDropdown = document.getElementById("nameDropdown");
-
-    const locationInput = document.getElementById("location");
-    const locationDropdown = document.getElementById("locationDropdown");
-
-    let activeIndex = -1;
-    let locationActiveIndex = -1;
-
-    // 🔥 NAME SEARCH
-    nameInput.addEventListener("input", () => {
-        socket.emit("searchEntityName", {
-            token: localStorage.getItem("token"),
-            value: nameInput.value
-        });
+    setupAutocomplete("name","entityName",(input,item,type)=>{
+        input.value = item[type];
+    });
+    setupAutocomplete("location","entityLocation",(input,item,type)=>{
+        input.value = item[type];
     });
 
-    socket.off("entityNameResults");
-    socket.on("entityNameResults", (list) => {
-        activeIndex = -1;
-        nameDropdown.innerHTML = "";
+    // const nameInput = document.getElementById("name");
+    // const nameDropdown = document.getElementById("nameDropdown");
 
-        list.forEach((item) => {
-            const div = document.createElement("div");
-            div.innerText = item;
+    // const locationInput = document.getElementById("location");
+    // const locationDropdown = document.getElementById("locationDropdown");
 
-            div.onclick = () => {
-                nameInput.value = item;
-                nameDropdown.innerHTML = "";
-            };
+    // let activeIndex = -1;
+    // let locationActiveIndex = -1;
 
-            nameDropdown.appendChild(div);
-        });
-    });
+    // // 🔥 NAME SEARCH
+    // nameInput.addEventListener("input", () => {
+    //     socket.emit("searchEntityName", {
+    //         token: localStorage.getItem("token"),
+    //         value: nameInput.value
+    //     });
+    // });
 
-    nameInput.addEventListener("keydown", (e) => {
-        const items = nameDropdown.querySelectorAll("div");
-        if (!items.length) return;
+    // socket.off("entityNameResults");
+    // socket.on("entityNameResults", (list) => {
+    //     activeIndex = -1;
+    //     nameDropdown.innerHTML = "";
 
-        if (e.key === "ArrowDown") {
-            e.preventDefault();
-            activeIndex = (activeIndex + 1) % items.length;
-            updateHighlight(items, activeIndex);
-        }
+    //     list.forEach((item) => {
+    //         const div = document.createElement("div");
+    //         div.innerText = item;
 
-        if (e.key === "ArrowUp") {
-            e.preventDefault();
-            activeIndex = (activeIndex - 1 + items.length) % items.length;
-            updateHighlight(items, activeIndex);
-        }
+    //         div.onclick = () => {
+    //             nameInput.value = item;
+    //             nameDropdown.innerHTML = "";
+    //         };
 
-        if (e.key === "Enter") {
-            e.preventDefault();
-            if (activeIndex >= 0) {
-                nameInput.value = items[activeIndex].innerText;
-                nameDropdown.innerHTML = "";
-            }
-        }
-    });
+    //         nameDropdown.appendChild(div);
+    //     });
+    // });
 
-    nameDropdown.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-    });
+    // nameInput.addEventListener("keydown", (e) => {
+    //     const items = nameDropdown.querySelectorAll("div");
+    //     if (!items.length) return;
 
-    // 🔥 LOCATION SEARCH
-    locationInput.addEventListener("input", () => {
-        socket.emit("searchEntityLocation", {
-            token: localStorage.getItem("token"),
-            value: locationInput.value
-        });
-    });
+    //     if (e.key === "ArrowDown") {
+    //         e.preventDefault();
+    //         activeIndex = (activeIndex + 1) % items.length;
+    //         updateHighlight(items, activeIndex);
+    //     }
 
-    socket.off("entityLocationResults");
-    socket.on("entityLocationResults", (list) => {
-        locationActiveIndex = -1;
-        locationDropdown.innerHTML = "";
+    //     if (e.key === "ArrowUp") {
+    //         e.preventDefault();
+    //         activeIndex = (activeIndex - 1 + items.length) % items.length;
+    //         updateHighlight(items, activeIndex);
+    //     }
 
-        list.forEach((item) => {
-            const div = document.createElement("div");
-            div.innerText = item;
+    //     if (e.key === "Enter") {
+    //         e.preventDefault();
+    //         if (activeIndex >= 0) {
+    //             nameInput.value = items[activeIndex].innerText;
+    //             nameDropdown.innerHTML = "";
+    //         }
+    //     }
+    // });
 
-            div.onclick = () => {
-                locationInput.value = item;
-                locationDropdown.innerHTML = "";
-            };
+    // nameDropdown.addEventListener("mousedown", (e) => {
+    //     e.preventDefault();
+    // });
 
-            locationDropdown.appendChild(div);
-        });
-    });
+    // // 🔥 LOCATION SEARCH
+    // locationInput.addEventListener("input", () => {
+    //     socket.emit("searchEntityLocation", {
+    //         token: localStorage.getItem("token"),
+    //         value: locationInput.value
+    //     });
+    // });
 
-    locationInput.addEventListener("keydown", (e) => {
-        const items = locationDropdown.querySelectorAll("div");
-        if (!items.length) return;
+    // socket.off("entityLocationResults");
+    // socket.on("entityLocationResults", (list) => {
+    //     locationActiveIndex = -1;
+    //     locationDropdown.innerHTML = "";
 
-        if (e.key === "ArrowDown") {
-            e.preventDefault();
-            locationActiveIndex = (locationActiveIndex + 1) % items.length;
-            updateHighlight(items, locationActiveIndex);
-        }
+    //     list.forEach((item) => {
+    //         const div = document.createElement("div");
+    //         div.innerText = item;
 
-        if (e.key === "ArrowUp") {
-            e.preventDefault();
-            locationActiveIndex = (locationActiveIndex - 1 + items.length) % items.length;
-            updateHighlight(items, locationActiveIndex);
-        }
+    //         div.onclick = () => {
+    //             locationInput.value = item;
+    //             locationDropdown.innerHTML = "";
+    //         };
 
-        if (e.key === "Enter") {
-            e.preventDefault();
-            if (locationActiveIndex >= 0) {
-                locationInput.value = items[locationActiveIndex].innerText;
-                locationDropdown.innerHTML = "";
-            }
-        }
-    });
+    //         locationDropdown.appendChild(div);
+    //     });
+    // });
 
-    locationDropdown.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-    });
+    // locationInput.addEventListener("keydown", (e) => {
+    //     const items = locationDropdown.querySelectorAll("div");
+    //     if (!items.length) return;
 
-    nameInput.focus();
+    //     if (e.key === "ArrowDown") {
+    //         e.preventDefault();
+    //         locationActiveIndex = (locationActiveIndex + 1) % items.length;
+    //         updateHighlight(items, locationActiveIndex);
+    //     }
+
+    //     if (e.key === "ArrowUp") {
+    //         e.preventDefault();
+    //         locationActiveIndex = (locationActiveIndex - 1 + items.length) % items.length;
+    //         updateHighlight(items, locationActiveIndex);
+    //     }
+
+    //     if (e.key === "Enter") {
+    //         e.preventDefault();
+    //         if (locationActiveIndex >= 0) {
+    //             locationInput.value = items[locationActiveIndex].innerText;
+    //             locationDropdown.innerHTML = "";
+    //         }
+    //     }
+    // });
+
+    // locationDropdown.addEventListener("mousedown", (e) => {
+    //     e.preventDefault();
+    // });
+
+    // nameInput.focus();
 }
 
 function saveEntity(){

@@ -36,7 +36,9 @@ class Entities(Base):
     phone = Column(String)
     location = Column(String)
 
+    opening_balance = Column(Float,default=0)
     balance = Column(Float,default=0)
+    last_closing_date = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
 
     created_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
     updated_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
@@ -108,6 +110,9 @@ class TransactionItem(Base):
     quantity = Column(Float)
     base_weight = Column(Float)
     final_weight = Column(Float)
+
+    cash = Column(Float)
+
     created_by = Column(Integer)
 
 class Location(Base):
