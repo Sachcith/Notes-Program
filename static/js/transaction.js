@@ -116,15 +116,18 @@ function addTransaction() {
             </div>
         </div>
     `;
-    // addItemRow();
+    addItemRow();
 
     setupAutocomplete("name","transactionEntityName",(input,item,type)=>{
         input.value = item[type];
         const old_balance = parseFloat(item["old_balance"] || 0);
         document.getElementById("old_balance").innerHTML = parseFloat(old_balance.toFixed(3) || 0);
         document.getElementById("old_balance").dataset.realValue = old_balance;
-        addItemRow();
     });
+
+    // setupAutocomplete("name","transactionEntityName",(input,item,type)=>{
+    //     input.value = item[type];
+    // });
 }
 
 /* SAVE */
@@ -292,7 +295,8 @@ function addItemRow(item = {}) {
         profit.value = item["itemProfit"];
         let wastage = document.getElementById(inputId+"Wastage");
         wastage.value = item["itemWastage"];
-    },document.getElementById("name").value);
+    },() => {return document.getElementById("name").value || ""}
+    );
 
     return div;
 }

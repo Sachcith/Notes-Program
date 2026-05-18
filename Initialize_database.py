@@ -111,8 +111,6 @@ class TransactionItem(Base):
 
     id = Column(Integer, primary_key=True)
     transaction_id = Column(Integer, ForeignKey("transactions.id"))
-
-    item_id = Column(Integer, ForeignKey("items.id"))
     touch = Column(Float)
 
     seal = Column(Integer, ForeignKey("entities.id"))
@@ -151,5 +149,14 @@ class Users(Base):
     password_hash = Column(String, nullable=False)
 
     role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.user)
+
+class Stock(Base):
+    __tablename__ = "stock"
+
+    id = Column(Integer,primary_key=True)
+    item_id = Column(Integer, ForeignKey("items.id"))
+    
+    current_stock = Column(Float,default=0)
+
 
 Base.metadata.create_all(engine)

@@ -1214,5 +1214,147 @@ def saveItemRule(data):
         db.close()
 
 
+@socketio.on("getStock")
+def getStock(data):
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    db = SessionLocal()
+    try:
+        decoded = decode_token(token)
+        current_user = decoded["sub"]
+        user = db.query(models.Users).filter_by(username=current_user).first()
+        current_user_id = user.id
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    try:
+        stockClass = db.query(models.Stock).all()
+        itemData = []
+        for stock in stockClass:
+            item = db.query(models.Item).filter_by(id=stock.item_id).first()
+            itemData.append({
+                "id": stock.id,
+                "name": item.name,
+                "touch": item.touch,
+                "current_stock": stock.current_stock,
+                "created_at": str(item.created_at),
+                "created_by": item.created_by,
+            })
+        emit("stockData",itemData)
+
+    except Exception as e:
+        print("Error: ",e)
+        emit("error",{"message":"All Item Error!!"})
+    finally:
+        db.close()
+    
+@socketio.on("saveStock")
+def saveStock(data=None):
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    db = SessionLocal()
+    try:
+        decoded = decode_token(token)
+        current_user = decoded["sub"]
+        user = db.query(models.Users).filter_by(username=current_user).first()
+        current_user_id = user.id
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    try:
+        """
+            If stock already exist, that means Item already exist,
+            just update the Stock.
+            Else update Stock as well as Item table.
+
+            Similarly continue the Edit Stock thingy anad
+            delete stock thingy too
+
+        """
+        newItem = models.Item(
+            name = data.get("name"),
+            touch = data.get("touch"),
+            created_at=datetime.now(ZoneInfo("Asia/Kolkata")),
+            created_by=current_user_id
+        )
+        db.add(newItem)
+        db.commit()
+        db.refresh(newItem)
+        socketio.emit("saveStockOk",{})
+    except Exception as e:
+        print("Error:",e)
+        socketio.emit("error",{"message":"Error At Save Stock!!"})
+    finally:
+        db.close()
+
+@socketio.on("saveItemEdit")
+def saveItemEdit(data=None):
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    db = SessionLocal()
+    try:
+        decoded = decode_token(token)
+        current_user = decoded["sub"]
+        user = db.query(models.Users).filter_by(username=current_user).first()
+        current_user_id = user.id
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    try:
+        item = db.query(models.Item).filter(models.Item.id == data.get("id")).first()
+        if item:
+            item.name = data.get("name")
+            item.touch = data.get("touch")
+
+        db.commit()
+        socketio.emit("editItemOk",{})
+    except Exception as e:
+        print("Error:",e)
+        socketio.emit("error",{"message":"Error At Save Item!!"})
+    finally:
+        db.close()
+
+@socketio.on("deleteItem")
+def deleteItem(data):
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    db = SessionLocal()
+    try:
+        decoded = decode_token(token)
+        current_user = decoded["sub"]
+        user = db.query(models.Users).filter_by(username=current_user).first()
+        current_user_id = user.id
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    try:
+        item = db.query(models.Item).filter(models.Item.id == data.get("id")).first()
+        if item:
+            db.delete(item)
+            db.commit()
+        socketio.emit("deleteItemOk",{})
+    except Exception as e:
+        print("Error:",e)
+        socketio.emit("error",{"message":"Error At Save Item!!"})
+    finally:
+        db.close()
+
+
 if __name__=="__main__":
     socketio.run(app,debug=True,port=5000)

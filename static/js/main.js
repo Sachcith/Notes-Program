@@ -54,12 +54,20 @@ const modules = {
         ],
         left: [
             { id: "addBtn", label: "+ Add Entity", action: "addEntity()" },
-            { id: "editBtn", label: "Edit", action: "editEntity()" },
-            { id: "deleteBtn", label: "Delete", action: "deleteEntity()" },
-            { id: "entity_page", label: "Open Page", action: "openEntityPage()" },
             { id: "customer", label: "Customer", action: "selectButton(event)" , class: "customerbutton"},
             { id: "manufacturer", label: "Manufacturer", action: "selectButton(event)" , class: "manufacturerbutton"},
             { id: "wholesaler", label: "Wholesaler", action: "selectButton(event)" , class: "wholesalerbutton"},
+        ]
+    },
+
+    stock: {
+        top: [
+            { id: "allItemsBtn", label: "All Items", action: "" }
+        ],
+        left: [
+            { id: "addBtn", label: "+ Add Stock", action: "addStock()" },
+            { id: "editStockBtn", label: "Edit Stock", action: "editStock()" },
+            { id: "deleteStockBtn", label: "Delete Stock", action: "deleteStock()" }
         ]
     }
 
@@ -87,6 +95,10 @@ function openModule(type) {
 
     if (type === "entity") {
         getEntity();
+    }
+
+    if (type === "stock") {
+        getStock();
     }
 }
 
@@ -553,11 +565,15 @@ function setupAutocomplete(inputId, type, callback = null,entity_name = null) {
 
     function onInput() {
 
+        const entityName =
+        typeof entity_name === "function" ? entity_name() : entity_name;
+        console.log(entityName);
+
         socket.emit(searchEvent, {
             token: localStorage.getItem("token"),
             value: input.value,
             created_at: input.dataset.created_at,
-            entity_name: entity_name,
+            entity_name: entityName,
         });
     }
 

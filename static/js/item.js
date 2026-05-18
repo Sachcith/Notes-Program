@@ -33,7 +33,10 @@ function addItem(){
         <h2>Add Item</h2>
 
         <label>Name</label>
-        <input id="name" placeholder="Enter name" value="${current_name}">
+        <div class="input-wrapper">
+            <input id="name" placeholder="Enter Item Name" value="" autocomplete="off">
+            <div id="nameDropdown" class="dropdown"></div>
+        </div>
 
         <label>Touch</label>
         <input id="touch" type="number" step="any" placeholder="Enter touch value" value=92>
@@ -45,6 +48,13 @@ function addItem(){
     </div>
     `;
     document.getElementById("name").focus();
+
+    setupAutocomplete("name","itemName",(input,item,type)=>{
+        input.value = item[type];
+        const inputId = input.id;
+        let touch = document.getElementById("touch");
+        touch.value = item["itemTouch"];
+    });
 }
 
 function cancelItem(){
@@ -60,13 +70,16 @@ function editItem() {
     let d = selectedPage.d;
     grid.innerHTML = `
     <div class="form-container">
-        <h2>Add Item</h2>
+        <h2>Edit Item</h2>
 
         <label>Name</label>
-        <input id="name" placeholder="Enter name" value="${d.name}">
+        <div class="input-wrapper">
+            <input id="name" placeholder="Enter Item Name" value="${d.name}" autocomplete="off">
+            <div id="nameDropdown" class="dropdown"></div>
+        </div>
 
         <label>Touch</label>
-        <input id="touch" type="number" step="any" placeholder="Enter touch value" value="${d.touch}">
+        <input id="touch" type="number" step="any" placeholder="Enter touch value" value=${d.touch}>
 
         <div class="actions">
             <button onclick="saveItemEdit()">Save Changes</button>
@@ -74,6 +87,14 @@ function editItem() {
         </div>
     </div>
     `;
+    document.getElementById("name").focus();
+
+    setupAutocomplete("name","itemName",(input,item,type)=>{
+        input.value = item[type];
+        const inputId = input.id;
+        let touch = document.getElementById("touch");
+        touch.value = item["itemTouch"];
+    });
 
 }
 

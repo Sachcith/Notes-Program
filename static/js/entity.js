@@ -19,12 +19,12 @@ socket.on("entityData",(e)=>{
             div.className = "page";
             div.onclick = () => {
                 selectPage(div, d)
-
+                openEntityPage();
             };
 
             div.innerHTML = `
                 <b>${d.name || "New Entry"}</b><br>
-                Old Balance: ${d.balance || 0}<br>
+                Old Balance: ${d.balance.toFixed(3) || 0}<br>
                 <small>${d.location || ""}</small>
             `;
 
@@ -92,8 +92,7 @@ function updateHighlight(items, index){
 
 function cancelEntity(){
     unlock = true;
-    selectedPage = null;
-    getEntity();
+    openEntityPage();
 }
 
 function editEntity() {
@@ -124,7 +123,7 @@ function editEntity() {
             <br><br>
 
             <label>Balance</label>
-            <input id="balance" type="number" value="${d.balance}">
+            <input id="balance" type="number" value="${d.balance.toFixed(3)}">
             
             <label>Phone</label>
             <input id="phone" placeholder="Enter phone" value="${d.phone}">
@@ -186,7 +185,7 @@ socket.on("saveEntityOk",(e)=>{
 socket.on("editEntityOk",(e)=>{
     console.log("Entity Edited and Saved Successfully");
     unlock = true;
-    getEntity();
+    openEntityPage();
 });
 
 function deleteEntity(){
@@ -195,7 +194,7 @@ function deleteEntity(){
         return;
     }
 
-    const ok = confirm("Are you sure you want to delete this entity?");
+    const ok = confirm("Are you sure you want to delete "+selectedPage.d.name);
 
     if (!ok) return;
     socket.emit("deleteEntity",{
@@ -239,18 +238,18 @@ function openEntityPage() {
                 </h1>
 
                 <div class="hero-subtitle">
-                    ERP Client Dashboard
+                    ${client.location || "Client Location"}
                 </div>
 
             </div>
 
             <div class="hero-right">
 
-                <button class="hero-btn">
+                <button class="hero-btn" onclick="editEntity()">
                     Edit Client
                 </button>
 
-                <button class="hero-btn cancel-btn">
+                <button class="hero-btn cancel-btn" onclick="deleteEntity()">
                     Delete Client
                 </button>
 
@@ -270,7 +269,7 @@ function openEntityPage() {
                 </div>
 
                 <div class="stat-value">
-                    ${client.balance || 0} g
+                    ${client.balance.toFixed(3) || 0} g
                 </div>
             </div>
 
