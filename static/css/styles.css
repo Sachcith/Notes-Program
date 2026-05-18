@@ -400,3 +400,226 @@ input {
 .invisible_thingys {
     visibility: hidden;
 }
+
+/* =========================================
+DASHBOARD PAGE
+========================================= */
+
+.dashboard-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* =========================================
+HERO
+========================================= */
+
+.dashboard-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    background: #151515;
+
+    border: 1px solid #2b2b2b;
+
+    padding: 20px;
+
+    border-radius: 8px;
+}
+
+.hero-left h1 {
+    margin: 0;
+    font-size: 32px;
+}
+
+.hero-subtitle {
+    margin-top: 6px;
+    color: #999;
+}
+
+.hero-right {
+    display: flex;
+    gap: 10px;
+}
+
+.hero-btn {
+    padding: 10px 18px;
+}
+
+/* =========================================
+STATS GRID
+========================================= */
+
+.stats-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit, minmax(220px, 1fr));
+
+    gap: 15px;
+}
+
+.stat-card {
+
+    background: #181818;
+
+    border: 1px solid #2a2a2a;
+
+    border-radius: 8px;
+
+    padding: 20px;
+
+    transition: 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.stat-title {
+    color: #999;
+    font-size: 14px;
+}
+
+.stat-value {
+
+    margin-top: 10px;
+
+    font-size: 28px;
+
+    font-weight: bold;
+}
+
+/* =========================================
+SECTION
+========================================= */
+
+.dashboard-section {
+
+    background: #151515;
+
+    border: 1px solid #2a2a2a;
+
+    border-radius: 8px;
+
+    padding: 20px;
+}
+
+.section-top {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 20px;
+}
+
+/* =========================================
+HEADER ROW
+========================================= */
+
+.dashboard-header-row,
+.dashboard-item-row {
+
+    display: grid;
+
+    grid-template-columns:
+        2fr
+        1fr
+        1fr
+        1fr
+        180px;
+
+    gap: 12px;
+
+    align-items: center;
+}
+
+.dashboard-header-row {
+
+    padding: 10px 0;
+
+    color: #888;
+
+    font-weight: bold;
+
+    border-bottom: 1px solid #2a2a2a;
+
+    margin-bottom: 10px;
+}
+
+/* =========================================
+ITEM ROW
+========================================= */
+
+.dashboard-item-row {
+
+    padding: 12px 0;
+
+    border-bottom: 1px solid #222;
+}
+
+.dashboard-item-row input {
+
+    margin: 0;
+}
+
+/* =========================================
+STATUS
+========================================= */
+
+.status-pill {
+
+    background: #1f3d28;
+
+    color: #4ade80;
+
+    padding: 8px 12px;
+
+    border-radius: 8px;
+
+    text-align: center;
+
+    font-size: 13px;
+
+    font-weight: bold;
+}
+
+/* =========================================
+ACTIONS
+========================================= */
+
+.row-actions {
+
+    display: flex;
+
+    gap: 10px;
+}
+
+.edit-btn {
+
+    background: #2563eb;
+
+    border: none;
+
+    color: white;
+}
+
+.edit-btn.save-mode {
+
+    background: #16a34a;
+}
+
+.delete-btn {
+
+    background: #dc2626;
+
+    border: none;
+
+    color: white;
+}

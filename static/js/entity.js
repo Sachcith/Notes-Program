@@ -17,7 +17,10 @@ socket.on("entityData",(e)=>{
         if(d.type==current_mode.toUpperCase()){
             const div = document.createElement("div");
             div.className = "page";
-            div.onclick = () => selectPage(div, d);
+            div.onclick = () => {
+                selectPage(div, d)
+
+            };
 
             div.innerHTML = `
                 <b>${d.name || "New Entry"}</b><br>
@@ -448,3 +451,301 @@ socket.on("deleteEntityOk",(e)=>{
     unlock = true;
     getEntity();
 });
+
+
+/* =========================================
+CLIENT DASHBOARD PAGE
+ERP STYLE
+========================================= */
+
+function openEntityPage() {
+
+    const grid = document.getElementById("grid");
+
+    const client = selectedPage.d;
+
+    grid.innerHTML = `
+
+    <div class="dashboard-page">
+
+        <!-- =====================================
+        HERO SECTION
+        ====================================== -->
+
+        <div class="dashboard-hero">
+
+            <div class="hero-left">
+
+                <h1>
+                    ${client.name || "Client Name"}
+                </h1>
+
+                <div class="hero-subtitle">
+                    ERP Client Dashboard
+                </div>
+
+            </div>
+
+            <div class="hero-right">
+
+                <button class="hero-btn">
+                    Edit Client
+                </button>
+
+                <button class="hero-btn cancel-btn">
+                    Delete Client
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- =====================================
+        STATS CARDS
+        ====================================== -->
+
+        <div class="stats-grid">
+
+            <div class="stat-card">
+                <div class="stat-title">
+                    Gold Balance
+                </div>
+
+                <div class="stat-value">
+                    ${client.old_balance || 0} g
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-title">
+                    Average Transactions Per Month
+                </div>
+
+                <div class="stat-value">
+                    ${client.total_average_transactions || 0}
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-title">
+                    Average Weight Per Transaction
+                </div>
+
+                <div class="stat-value">
+                    ${client.total_average_transactions || 0}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- =====================================
+        ITEMS SECTION
+        ====================================== -->
+
+        <div class="dashboard-section">
+
+            <div class="section-top">
+
+                <h2>
+                    Item Configuration
+                </h2>
+
+                <button
+                    class="add-item-btn"
+                    onclick="addDashboardItemRow()"
+                >
+                    + Add Item
+                </button>
+
+            </div>
+
+            <!-- =================================
+            HEADER
+            ================================== -->
+
+            <div class="dashboard-header-row">
+
+                <div>Item Name</div>
+
+                <div>Default Profit %</div>
+
+                <div>Default Wastage %</div>
+
+                <div>Touch</div>
+
+                <div>Actions</div>
+
+            </div>
+
+            <!-- =================================
+            ITEMS
+            ================================== -->
+
+            <div id="itemsContainer"></div>
+
+        </div>
+
+    </div>
+    `;
+
+    if (client.items) {
+
+        client.items.forEach(item => {
+            addDashboardItemRow(item);
+        });
+    }
+}
+
+/* =========================================
+ADD ITEM ROW
+========================================= */
+
+let dashboardItemCounter = 0;
+
+function addDashboardItemRow(item = {}) {
+
+    const container =
+        document.getElementById("itemsContainer");
+
+    const row = document.createElement("div");
+
+    row.className = "dashboard-item-row";
+
+    dashboardItemCounter++;
+
+    const itemId =
+        "dashboard-item-" + dashboardItemCounter;
+
+    row.innerHTML = `
+
+        <!-- ITEM -->
+        <div class="input-wrapper">
+
+            <input
+                id="${itemId}"
+                placeholder="Item Name"
+                value="${item.item_name || ""}"
+                autocomplete="off"
+                disabled
+            >
+
+            <div
+                id="${itemId}Dropdown"
+                class="dropdown"
+            ></div>
+
+        </div>
+
+        <!-- PROFIT -->
+        <input
+            type="number"
+            placeholder="Profit %"
+            value="${item.profit_percent || ""}"
+            disabled
+        >
+
+        <!-- WASTAGE -->
+        <input
+            type="number"
+            placeholder="Wastage %"
+            value="${item.wastage_percent || ""}"
+            disabled
+        >
+
+        <!-- TOUCH -->
+        <input
+            type="number"
+            placeholder="Touch"
+            value="${item.touch || 92}"
+            disabled
+        >
+
+        <!-- ACTIONS -->
+        <div class="row-actions">
+
+            <button class="edit-btn">
+                Edit
+            </button>
+
+            <button class="delete-btn">
+                Delete
+            </button>
+
+        </div>
+    `;
+
+    container.appendChild(row);
+
+    /* =====================================
+    AUTOCOMPLETE
+    ====================================== */
+
+    setupAutocomplete(
+        itemId,
+        "itemName",
+        (input, itemData, type) => {
+
+            input.value = itemData[type];
+        }
+    );
+
+    const editBtn =
+        row.querySelector(".edit-btn");
+
+    const deleteBtn =
+        row.querySelector(".delete-btn");
+
+    const inputs =
+        row.querySelectorAll("input");
+
+    /* =====================================
+    EDIT
+    ====================================== */
+
+    editBtn.addEventListener("click", () => {
+
+        const isSave =
+            editBtn.innerText === "Save";
+
+        if (isSave) {
+
+            inputs.forEach(input => {
+                input.disabled = true;
+            });
+
+            editBtn.innerText = "Edit";
+
+            editBtn.classList.remove("save-mode");
+
+            console.log("SAVE ITEM");
+
+        } else {
+
+            inputs.forEach(input => {
+                input.disabled = false;
+            });
+
+            editBtn.innerText = "Save";
+
+            editBtn.classList.add("save-mode");
+
+            inputs[0].focus();
+        }
+    });
+
+    /* =====================================
+    DELETE
+    ====================================== */
+
+    deleteBtn.addEventListener("click", () => {
+
+        const ok =
+            confirm("Delete this item?");
+
+        if (!ok) return;
+
+        row.remove();
+    });
+
+    return row;
+}

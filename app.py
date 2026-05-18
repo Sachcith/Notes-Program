@@ -347,7 +347,7 @@ def search_entity_location(data):
         db.close()
 
 @socketio.on("searchTransactionEntityName")
-def search_entity_name(data):
+def search_transaction_entity_name(data):
     if not data:
         emit("error", {"msg": "no data received"})
         return
@@ -374,6 +374,42 @@ def search_entity_name(data):
                 "old_balance": get_old_balance(entity.id,data.get("created_at",None)),
             })
         emit("TransactionEntityNameResults",entityData)
+
+    except Exception as e:
+        print("Error: ",e)
+        emit("error",{"message":"Error in Search Entity!!"})
+    finally:
+        db.close()
+
+@socketio.on("searchItemName")
+def search_item_name(data):
+    if not data:
+        emit("error", {"msg": "no data received"})
+        return
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    token = str(token)
+    try:
+        decoded = decode_token(token)
+        username = decoded["sub"]
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    db = SessionLocal()
+    try:
+        itemClass = db.query(models.Item).filter(models.Item.name.ilike(f"%{data.get("value")}%")).distinct().limit(10).all()
+        itemData = []
+        for item in itemClass:
+            itemData.append({
+                "itemName":item.name,
+                "itemTouch":item.touch,
+            })
+        print(itemData)
+        emit("ItemNameResults",itemData)
 
     except Exception as e:
         print("Error: ",e)
@@ -681,11 +717,12 @@ def saveTransaction(data):
 def refresh_oldbalance(id,balance=None):
     try:
         db = SessionLocal()
-        latest_data = db.query(models.Transaction).filter_by(entity_id=id)
+        latest_data = db.query(models.Transaction).filter_by(entity_id=id).first()
         if latest_data==None:
             entity = db.query(models.Entities).filter_by(id=id).first()
             entity.balance = entity.opening_balance
             entity.updated_at = datetime.now(ZoneInfo("Asia/Kolkata"))
+            db.commit()
             return
         if balance==None:
             latest_data = db.query(models.Transaction).filter_by(entity_id=id).order_by(models.Transaction.created_at.desc()).first()
@@ -706,6 +743,7 @@ def refresh_oldbalance(id,balance=None):
             db.commit()
 
     except Exception as e:
+        print("Refresh OldBalance Error")
         print("Error:",e)
     finally:
         db.close()
@@ -950,8 +988,6 @@ def saveEditTransaction(data):
         backup_entity_id = db.query(models.Entities).filter_by(name=data.get("backup_name")).first().id
         transaction_correction_sequence(transaction_id=transaction_id,entity_id=None,created_at=transaction.created_at)
         transaction_correction_sequence(transaction_id=None,entity_id=backup_entity_id,created_at=transaction.created_at,old_balance_backup=data.get("old_balance_backup"))
-        print("#"*30)
-        print(entity_id,backup_entity_id)
         refresh_oldbalance(entity_id)
         refresh_oldbalance(backup_entity_id)
         socketio.emit("saveEditTransactionOk",{})
@@ -965,23 +1001,33 @@ def saveEditTransaction(data):
         db.close()
 
 def transaction_correction_sequence(transaction_id=None,entity_id=None,created_at=None,old_balance_backup=None):
-    db = SessionLocal()
-    if entity_id==None:
-        entity_id = db.query(models.Transaction).filter_by(id=transaction_id).first().entity_id
-    if created_at==None:
-        created_at = db.query(models.Transaction).filter_by(id=transaction_id).first().created_at
-        
-    sequenceData = db.query(models.Transaction).filter(
-        models.Transaction.entity_id==entity_id,
-        models.Transaction.created_at>created_at,
-    ).order_by(models.Transaction.created_at)
-    prev_balance = get_old_balance(entity_id,created_at)
-    for seqData in sequenceData:
-        temp_balance = seqData.old_balance
-        seqData.old_balance = prev_balance
-        seqData.new_balance = seqData.new_balance - temp_balance + prev_balance
-        prev_balance = seqData.new_balance
-    db.commit()
+    try:
+        db = SessionLocal()
+        if entity_id==None:
+            entity_id = db.query(models.Transaction).filter_by(id=transaction_id).first().entity_id
+        if created_at==None:
+            created_at = db.query(models.Transaction).filter_by(id=transaction_id).first().created_at
+            
+        sequenceData = db.query(models.Transaction).filter(
+            models.Transaction.entity_id==entity_id,
+            models.Transaction.created_at>created_at,
+        ).order_by(models.Transaction.created_at)
+        prev_balance = get_old_balance(entity_id,created_at)
+        for seqData in sequenceData:
+            temp_balance = seqData.old_balance
+            seqData.old_balance = prev_balance
+            seqData.new_balance = seqData.new_balance - temp_balance + prev_balance
+            prev_balance = seqData.new_balance
+        db.commit()
+    
+    except Exception as e:
+        print("Error:",e)
+        import traceback
+        traceback.print_exc()
+        socketio.emit("error",{"message":"Error At Save Edit Transaction!!"})
+    finally:
+        db.commit()
+        db.close()
 
 
 @socketio.on("deleteTransaction")

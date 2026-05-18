@@ -184,9 +184,11 @@ function saveTransaction() {
 socket.on("saveTransactionOk",(e)=>{
     console.log("New Transaction Saved Successfully");
     unlock = true;
+    itemRowCounter = 0;
     getTransaction();
 });
 
+let itemRowCounter = 0;
 /* ADD ITEM ROW */
 function addItemRow(item = {}) {
     const container = document.getElementById("itemsContainer");
@@ -194,12 +196,19 @@ function addItemRow(item = {}) {
     const div = document.createElement("div");
     div.className = "item-row";
 
+    itemRowCounter++;
+    const itemId = "item-"+itemRowCounter;
+
     div.innerHTML = `
-        <input placeholder="Item" value="${item.item_name || ""}" data-id="${item.id}">
+
+        <div class="input-wrapper">
+            <input id="${itemId}" placeholder="Item" value="${item.item_name || ""}" data-id="${item.id}" autocomplete="off">
+            <div id="${itemId}Dropdown" class="dropdown"></div>
+        </div>
 
         <input type="number" placeholder="Base Wt" value="${item.base_weight || ""}">
 
-        <input type="number" placeholder="Touch" value="${item.touch || 92}">
+        <input id="${itemId}Touch" type="number" placeholder="Touch" value="${item.touch || 92}">
 
         <input placeholder="Seal" value="${item.seal || ""}">
 
@@ -271,6 +280,14 @@ function addItemRow(item = {}) {
 
         const rows = document.querySelectorAll(".item-row");
         calculate_global_final_values(rows);
+    });
+
+    setupAutocomplete(itemId,"itemName",(input,item,type)=>{
+        input.value = item[type];
+        const inputId = input.id;
+        let touch = document.getElementById(inputId+"Touch");
+        touch.value = item["itemTouch"];
+
     });
 
     return div;

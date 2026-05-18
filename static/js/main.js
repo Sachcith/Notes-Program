@@ -56,6 +56,7 @@ const modules = {
             { id: "addBtn", label: "+ Add Entity", action: "addEntity()" },
             { id: "editBtn", label: "Edit", action: "editEntity()" },
             { id: "deleteBtn", label: "Delete", action: "deleteEntity()" },
+            { id: "entity_page", label: "Open Page", action: "openEntityPage()" },
             { id: "customer", label: "Customer", action: "selectButton(event)" , class: "customerbutton"},
             { id: "manufacturer", label: "Manufacturer", action: "selectButton(event)" , class: "manufacturerbutton"},
             { id: "wholesaler", label: "Wholesaler", action: "selectButton(event)" , class: "wholesalerbutton"},
@@ -481,23 +482,60 @@ function setupAutocomplete(inputId, type, callback = null) {
         }
     }
 
+    // function renderList(list = []) {
+
+    //     currentList = list;
+
+    //     clearDropdown();
+
+    //     list.forEach((item, index) => {
+
+    //         const div = document.createElement("div");
+
+    //         // 🔥 text shown in dropdown
+    //         // div.innerText =
+    //         //     item.name ||
+    //         //     item.location ||
+    //         //     item.value ||
+    //         //     "Unknown";
+    //         div.innerText = item[type];
+
+    //         div.onclick = () => {
+    //             selectItem(item);
+    //         };
+
+    //         div.addEventListener("mousedown", (e) => {
+    //             e.preventDefault();
+    //         });
+
+    //         dropdown.appendChild(div);
+    //     });
+    // }
+
     function renderList(list = []) {
 
         currentList = list;
 
         clearDropdown();
 
+        const rect = input.getBoundingClientRect();
+
+        dropdown.style.position = "fixed";
+
+        dropdown.style.top = `${rect.bottom + 2}px`;
+
+        dropdown.style.left = `${rect.left}px`;
+
+        dropdown.style.width = `${rect.width}px`;
+
+        dropdown.style.zIndex = "999999";
+
         list.forEach((item, index) => {
 
             const div = document.createElement("div");
 
-            // 🔥 text shown in dropdown
-            // div.innerText =
-            //     item.name ||
-            //     item.location ||
-            //     item.value ||
-            //     "Unknown";
-            div.innerText = item[type];
+            const temp = " "+item["itemTouch"];
+            div.innerText = item[type]+temp || item[type];
 
             div.onclick = () => {
                 selectItem(item);
@@ -577,6 +615,7 @@ function setupAutocomplete(inputId, type, callback = null) {
 
     socket.on(resultsEvent, renderList);
 }
+
 
 /* AUTO COMPLETE THINGY END */
 
