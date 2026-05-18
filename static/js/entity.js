@@ -80,127 +80,6 @@ function addEntity(){
     setupAutocomplete("location","entityLocation",(input,item,type)=>{
         input.value = item[type];
     });
-    // const nameInput = document.getElementById("name");
-    // const nameDropdown = document.getElementById("nameDropdown");
-
-    // nameInput.addEventListener("input", () => {
-    //     const value = nameInput.value;
-
-    //     socket.emit("searchEntityName", {
-    //         token: localStorage.getItem("token"),
-    //         value: value
-    //     });
-    // });
-
-    // const locationInput = document.getElementById("location");
-    // const locationDropdown = document.getElementById("locationDropdown");
-
-    // locationInput.addEventListener("input", () => {
-    //     const value = locationInput.value;
-
-    //     socket.emit("searchEntityLocation", {
-    //         token: localStorage.getItem("token"),
-    //         value: value
-    //     });
-    // });
-
-    // let activeIndex = -1;
-    // let currentList = [];
-
-    // socket.on("entityNameResults", (list) => {
-    //     currentList = list;
-    //     activeIndex = -1;
-    //     nameDropdown.innerHTML = "";
-
-    //     list.forEach((item, index) => {
-    //         const div = document.createElement("div");
-    //         div.innerText = item;
-
-    //         div.onclick = () => {
-    //             nameInput.value = item;
-    //             nameDropdown.innerHTML = "";
-    //         };
-
-    //         nameDropdown.appendChild(div);
-    //     });
-    // });
-
-    // nameInput.addEventListener("keydown", (e) => {
-    //     const items = nameDropdown.querySelectorAll("div");
-
-    //     if (!items.length) return;
-
-    //     if (e.key === "ArrowDown") {
-    //         e.preventDefault();
-    //         activeIndex = (activeIndex + 1) % items.length;
-    //         updateHighlight(items, activeIndex); // ✅ FIX
-    //     }
-
-    //     if (e.key === "ArrowUp") {
-    //         e.preventDefault();
-    //         activeIndex = (activeIndex - 1 + items.length) % items.length;
-    //         updateHighlight(items, activeIndex); // ✅ FIX
-    //     }
-
-    //     if (e.key === "Enter") {
-    //         e.preventDefault();
-    //         if (activeIndex >= 0) {
-    //             nameInput.value = items[activeIndex].innerText;
-    //             nameDropdown.innerHTML = "";
-    //         }
-    //     }
-    // });
-
-    // let locationActiveIndex = -1;
-
-    // socket.on("entityLocationResults", (list) => {
-    //     locationActiveIndex = -1;
-    //     locationDropdown.innerHTML = "";
-
-    //     list.forEach((item, index) => {
-    //         const div = document.createElement("div");
-    //         div.innerText = item;
-
-    //         div.onclick = () => {
-    //             locationInput.value = item;
-    //             locationDropdown.innerHTML = "";
-    //         };
-
-    //         locationDropdown.appendChild(div);
-    //     });
-    // });
-
-    // locationInput.addEventListener("keydown", (e) => {
-    //     const items = locationDropdown.querySelectorAll("div");
-
-    //     if (!items.length) return;
-
-    //     if (e.key === "ArrowDown") {
-    //         e.preventDefault();
-    //         locationActiveIndex = (locationActiveIndex + 1) % items.length;
-    //         updateHighlight(items, locationActiveIndex);
-    //     }
-
-    //     if (e.key === "ArrowUp") {
-    //         e.preventDefault();
-    //         locationActiveIndex = (locationActiveIndex - 1 + items.length) % items.length;
-    //         updateHighlight(items, locationActiveIndex);
-    //     }
-
-    //     if (e.key === "Enter") {
-    //         e.preventDefault();
-    //         if (locationActiveIndex >= 0) {
-    //             locationInput.value = items[locationActiveIndex].innerText;
-    //             locationDropdown.innerHTML = "";
-    //         }
-    //     }
-    // });
-
-    // locationDropdown.addEventListener("mousedown", (e) => {
-    //     e.preventDefault();
-    // });
-    
-    // document.getElementById("name").focus();
 }
 
 function updateHighlight(items, index){
@@ -271,127 +150,6 @@ function editEntity() {
     setupAutocomplete("location","entityLocation",(input,item,type)=>{
         input.value = item[type];
     });
-
-    // const nameInput = document.getElementById("name");
-    // const nameDropdown = document.getElementById("nameDropdown");
-
-    // const locationInput = document.getElementById("location");
-    // const locationDropdown = document.getElementById("locationDropdown");
-
-    // let activeIndex = -1;
-    // let locationActiveIndex = -1;
-
-    // // 🔥 NAME SEARCH
-    // nameInput.addEventListener("input", () => {
-    //     socket.emit("searchEntityName", {
-    //         token: localStorage.getItem("token"),
-    //         value: nameInput.value
-    //     });
-    // });
-
-    // socket.off("entityNameResults");
-    // socket.on("entityNameResults", (list) => {
-    //     activeIndex = -1;
-    //     nameDropdown.innerHTML = "";
-
-    //     list.forEach((item) => {
-    //         const div = document.createElement("div");
-    //         div.innerText = item;
-
-    //         div.onclick = () => {
-    //             nameInput.value = item;
-    //             nameDropdown.innerHTML = "";
-    //         };
-
-    //         nameDropdown.appendChild(div);
-    //     });
-    // });
-
-    // nameInput.addEventListener("keydown", (e) => {
-    //     const items = nameDropdown.querySelectorAll("div");
-    //     if (!items.length) return;
-
-    //     if (e.key === "ArrowDown") {
-    //         e.preventDefault();
-    //         activeIndex = (activeIndex + 1) % items.length;
-    //         updateHighlight(items, activeIndex);
-    //     }
-
-    //     if (e.key === "ArrowUp") {
-    //         e.preventDefault();
-    //         activeIndex = (activeIndex - 1 + items.length) % items.length;
-    //         updateHighlight(items, activeIndex);
-    //     }
-
-    //     if (e.key === "Enter") {
-    //         e.preventDefault();
-    //         if (activeIndex >= 0) {
-    //             nameInput.value = items[activeIndex].innerText;
-    //             nameDropdown.innerHTML = "";
-    //         }
-    //     }
-    // });
-
-    // nameDropdown.addEventListener("mousedown", (e) => {
-    //     e.preventDefault();
-    // });
-
-    // // 🔥 LOCATION SEARCH
-    // locationInput.addEventListener("input", () => {
-    //     socket.emit("searchEntityLocation", {
-    //         token: localStorage.getItem("token"),
-    //         value: locationInput.value
-    //     });
-    // });
-
-    // socket.off("entityLocationResults");
-    // socket.on("entityLocationResults", (list) => {
-    //     locationActiveIndex = -1;
-    //     locationDropdown.innerHTML = "";
-
-    //     list.forEach((item) => {
-    //         const div = document.createElement("div");
-    //         div.innerText = item;
-
-    //         div.onclick = () => {
-    //             locationInput.value = item;
-    //             locationDropdown.innerHTML = "";
-    //         };
-
-    //         locationDropdown.appendChild(div);
-    //     });
-    // });
-
-    // locationInput.addEventListener("keydown", (e) => {
-    //     const items = locationDropdown.querySelectorAll("div");
-    //     if (!items.length) return;
-
-    //     if (e.key === "ArrowDown") {
-    //         e.preventDefault();
-    //         locationActiveIndex = (locationActiveIndex + 1) % items.length;
-    //         updateHighlight(items, locationActiveIndex);
-    //     }
-
-    //     if (e.key === "ArrowUp") {
-    //         e.preventDefault();
-    //         locationActiveIndex = (locationActiveIndex - 1 + items.length) % items.length;
-    //         updateHighlight(items, locationActiveIndex);
-    //     }
-
-    //     if (e.key === "Enter") {
-    //         e.preventDefault();
-    //         if (locationActiveIndex >= 0) {
-    //             locationInput.value = items[locationActiveIndex].innerText;
-    //             locationDropdown.innerHTML = "";
-    //         }
-    //     }
-    // });
-
-    // locationDropdown.addEventListener("mousedown", (e) => {
-    //     e.preventDefault();
-    // });
-
-    // nameInput.focus();
 }
 
 function saveEntity(){
@@ -512,7 +270,7 @@ function openEntityPage() {
                 </div>
 
                 <div class="stat-value">
-                    ${client.old_balance || 0} g
+                    ${client.balance || 0} g
                 </div>
             </div>
 
@@ -567,11 +325,11 @@ function openEntityPage() {
 
                 <div>Item Name</div>
 
+                <div>Touch</div>
+
                 <div>Default Profit %</div>
 
                 <div>Default Wastage %</div>
-
-                <div>Touch</div>
 
                 <div>Actions</div>
 
@@ -588,13 +346,26 @@ function openEntityPage() {
     </div>
     `;
 
-    if (client.items) {
+    socket.emit("addItemsForEntitiesSequence",{
+        token: localStorage.getItem("token"),
+        entity_id: client.id,
+    });
 
-        client.items.forEach(item => {
+    // if (client.items) {
+
+    //     client.items.forEach(item => {
+    //         addDashboardItemRow(item);
+    //     });
+    // }
+}
+
+socket.on("addItemsForEntities",(data)=>{
+    if(data.items){
+        data.items.forEach(item=>{
             addDashboardItemRow(item);
         });
     }
-}
+});
 
 /* =========================================
 ADD ITEM ROW
@@ -636,6 +407,14 @@ function addDashboardItemRow(item = {}) {
 
         </div>
 
+        <!-- TOUCH -->
+        <input
+            type="number"
+            placeholder="Touch"
+            value="${item.touch || 92}"
+            disabled
+        >
+
         <!-- PROFIT -->
         <input
             type="number"
@@ -649,14 +428,6 @@ function addDashboardItemRow(item = {}) {
             type="number"
             placeholder="Wastage %"
             value="${item.wastage_percent || ""}"
-            disabled
-        >
-
-        <!-- TOUCH -->
-        <input
-            type="number"
-            placeholder="Touch"
-            value="${item.touch || 92}"
             disabled
         >
 
@@ -717,13 +488,23 @@ function addDashboardItemRow(item = {}) {
 
             editBtn.classList.remove("save-mode");
 
-            console.log("SAVE ITEM");
+            const data = {
+                token: localStorage.getItem("token"),
+                item_name: inputs[0].value,
+                entity_id: selectedPage.d.id,
+                touch: parseFloat(inputs[1].value || 0),
+                profit: parseFloat(inputs[2].value || 0),
+                wastage: parseFloat(inputs[3].value || 0),
+            }
+            socket.emit("saveItemRule",data);
+            
 
         } else {
 
             inputs.forEach(input => {
                 input.disabled = false;
             });
+            inputs[1].disabled = true;
 
             editBtn.innerText = "Save";
 
@@ -731,6 +512,17 @@ function addDashboardItemRow(item = {}) {
 
             inputs[0].focus();
         }
+    });
+
+    const profit = inputs[2];
+    const wastage = inputs[3];
+    
+    profit.addEventListener("input",()=>{
+        wastage.value = "";
+    });
+
+    wastage.addEventListener("input",()=>{
+        profit.value = "";
     });
 
     /* =====================================

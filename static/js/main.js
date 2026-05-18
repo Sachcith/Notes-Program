@@ -447,7 +447,7 @@ function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function setupAutocomplete(inputId, type, callback = null) {
+function setupAutocomplete(inputId, type, callback = null,entity_name = null) {
 
     const input = document.getElementById(inputId);
     const dropdown = document.getElementById(`${inputId}Dropdown`);
@@ -534,8 +534,10 @@ function setupAutocomplete(inputId, type, callback = null) {
 
             const div = document.createElement("div");
 
-            const temp = " "+item["itemTouch"];
-            div.innerText = item[type]+temp || item[type];
+            let temp = "";
+            if(item["tempTouch"]) temp = " "+item["itemTouch"];
+
+            div.innerText = item[type]+temp;
 
             div.onclick = () => {
                 selectItem(item);
@@ -555,6 +557,7 @@ function setupAutocomplete(inputId, type, callback = null) {
             token: localStorage.getItem("token"),
             value: input.value,
             created_at: input.dataset.created_at,
+            entity_name: entity_name,
         });
     }
 

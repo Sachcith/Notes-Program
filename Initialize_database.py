@@ -9,7 +9,7 @@ from enum import Enum
 
 from sqlalchemy import Enum as SQLEnum
 
-from sqlalchemy import ForeignKey, Float
+from sqlalchemy import ForeignKey, Float, UniqueConstraint
 
 from db import Base, engine
 
@@ -31,7 +31,7 @@ class Entities(Base):
     __tablename__ = "entities"
 
     id = Column(Integer, primary_key=True)
-    name = Column(String,nullable=False)
+    name = Column(String,nullable=False,unique=True)
     type = Column(SQLEnum(EntityType), nullable=False)
     phone = Column(String)
     location = Column(String)
@@ -54,6 +54,14 @@ class Item(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
     created_by = Column(Integer)
 
+    __table_args__ = (
+        UniqueConstraint(
+            'name',
+            'touch',
+            name='uq_item_name_touch'
+        ),
+    )
+
 class Rule(Base):
     __tablename__ = "rules"
 
@@ -67,6 +75,14 @@ class Rule(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
     updated_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
     created_by = Column(Integer)
+
+    __table_args__ = (
+        UniqueConstraint(
+            'entity_id',
+            'item_id',
+            name='uq_rule_entity_item'
+        ),
+    )
 
 class Transaction(Base):
     __tablename__ = "transactions"

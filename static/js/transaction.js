@@ -116,13 +116,14 @@ function addTransaction() {
             </div>
         </div>
     `;
-    addItemRow();
+    // addItemRow();
 
     setupAutocomplete("name","transactionEntityName",(input,item,type)=>{
         input.value = item[type];
         const old_balance = parseFloat(item["old_balance"] || 0);
         document.getElementById("old_balance").innerHTML = parseFloat(old_balance.toFixed(3) || 0);
         document.getElementById("old_balance").dataset.realValue = old_balance;
+        addItemRow();
     });
 }
 
@@ -212,8 +213,8 @@ function addItemRow(item = {}) {
 
         <input placeholder="Seal" value="${item.seal || ""}">
 
-        <input type="number" placeholder="Profit %" value="${item.profit_percent || ""}">
-        <input type="number" placeholder="Wastage %" value="${item.wastage_percent || ""}">
+        <input id="${itemId}Profit" type="number" placeholder="Profit %" value="${item.profit_percent || ""}">
+        <input id="${itemId}Wastage" type="number" placeholder="Wastage %" value="${item.wastage_percent || ""}">
         <input type="number" placeholder="Stone Less" value="${item.stone_less || ""}">
 
         <input type="number" placeholder="Qty" value="${item.quantity || ""}">
@@ -287,8 +288,11 @@ function addItemRow(item = {}) {
         const inputId = input.id;
         let touch = document.getElementById(inputId+"Touch");
         touch.value = item["itemTouch"];
-
-    });
+        let profit = document.getElementById(inputId+"Profit");
+        profit.value = item["itemProfit"];
+        let wastage = document.getElementById(inputId+"Wastage");
+        wastage.value = item["itemWastage"];
+    },document.getElementById("name").value);
 
     return div;
 }

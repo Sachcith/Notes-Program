@@ -402,18 +402,34 @@ def search_item_name(data):
     db = SessionLocal()
     try:
         itemClass = db.query(models.Item).filter(models.Item.name.ilike(f"%{data.get("value")}%")).distinct().limit(10).all()
+        entity = db.query(models.Entities).filter_by(name=data.get("entity_name")).first()
+        print(data.get("entity_name"))
         itemData = []
         for item in itemClass:
-            itemData.append({
-                "itemName":item.name,
-                "itemTouch":item.touch,
-            })
+            rule = None
+            if entity!=None:
+                rule = db.query(models.Rule).filter(
+                    models.Rule.item_id == item.id,
+                    models.Rule.entity_id == entity.id,
+                ).first()
+            if rule==None:
+                itemData.append({
+                    "itemName":item.name,
+                    "itemTouch":item.touch,
+                })
+            else:
+                itemData.append({
+                    "itemName":item.name,
+                    "itemTouch":item.touch,
+                    "itemProfit":rule.profit_percent,
+                    "itemWastage":rule.wastage_percent,
+                })
         print(itemData)
         emit("ItemNameResults",itemData)
 
     except Exception as e:
         print("Error: ",e)
-        emit("error",{"message":"Error in Search Entity!!"})
+        emit("error",{"message":"Error in Search Item Name!!"})
     finally:
         db.close()
 
@@ -698,6 +714,24 @@ def saveTransaction(data):
             db.commit()
             db.refresh(newTransactionItem)
 
+            rule = db.query(models.Rule).filter(
+                models.Rule.entity_id==entity_id,
+                models.Rule.item_id==item_id).first()
+            if rule==None:
+                newRule = models.Rule(
+                    entity_id = entity_id,
+                    item_id = item_id,
+                    profit_percent = item.get("profit",0),
+                    wastage_percent = item.get("wastage",0),
+                    created_at = time,
+                    updated_at = time,
+                    created_by = current_user_id
+                )
+                db.add(newRule)
+                db.commit()
+                db.refresh(newRule)
+
+
         new_balance_function, flag = calculate_new_balance(data.get("old_balance"),data.get("items"))
         if flag==False:
             print("Error in Total Checking!!")
@@ -937,6 +971,7 @@ def saveEditTransaction(data):
         #{'itemname': '', 'baseweight': 0, 'seal': 0, 
         # 'profit': 0, 'wastage': 0, 'stone': 0, 
         # 'qty': 0, 'finalweight': 0, 'type': 'SELL'}]
+        time = datetime.now(ZoneInfo("Asia/Kolkata"))
         for item in items:
             item_id = db.query(models.Item).filter_by(name=item.get("itemname")).first().id
             item_type = item.get("type")
@@ -978,6 +1013,25 @@ def saveEditTransaction(data):
                 db.add(newTransactionItem)
                 db.commit()
                 db.refresh(newTransactionItem)
+            
+
+
+            rule = db.query(models.Rule).filter(
+                models.Rule.entity_id==entity_id,
+                models.Rule.item_id==item_id).first()
+            if rule==None:
+                newRule = models.Rule(
+                    entity_id = entity_id,
+                    item_id = item_id,
+                    profit_percent = item.get("profit",0),
+                    wastage_percent = item.get("wastage",0),
+                    created_at = time,
+                    updated_at = time,
+                    created_by = current_user_id
+                )
+                db.add(newRule)
+                db.commit()
+                db.refresh(newRule)
 
         new_balance_function, flag = calculate_new_balance(data.get("old_balance"),data.get("items"))
         if flag==False:
@@ -1026,7 +1080,6 @@ def transaction_correction_sequence(transaction_id=None,entity_id=None,created_a
         traceback.print_exc()
         socketio.emit("error",{"message":"Error At Save Edit Transaction!!"})
     finally:
-        db.commit()
         db.close()
 
 
@@ -1065,6 +1118,98 @@ def deleteTransaction(data):
     except Exception as e:
         print("Error:",e)
         socketio.emit("error",{"message":"Error At Delete Transaction!!"})
+    finally:
+        db.close()
+
+@socketio.on("addItemsForEntitiesSequence")
+def addItemsForEntitiesSequence(data):
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    db = SessionLocal()
+    try:
+        decoded = decode_token(token)
+        current_user = decoded["sub"]
+        user = db.query(models.Users).filter_by(username=current_user).first()
+        current_user_id = user.id
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    try:
+        ruleClass = db.query(models.Rule).filter_by(entity_id=data.get("entity_id")).order_by(models.Rule.created_at.desc()).distinct().limit(10).all()
+        itemData = []
+        for rule in ruleClass:
+            item = db.query(models.Item).filter_by(id=rule.item_id).first()
+            itemData.append({
+                "item_name": item.name,
+                "profit_percent": rule.profit_percent,
+                "wastage_percent": rule.wastage_percent,
+                "touch": item.touch,
+            })
+        actualData = {
+            "items": itemData,
+        }
+        print(actualData)
+        socketio.emit("addItemsForEntities",actualData)
+    except Exception as e:
+        print("Error:",e)
+        socketio.emit("error",{"message":"Error At Add Item For Entities!!"})
+    finally:
+        db.close()
+
+@socketio.on("saveItemRule")
+def saveItemRule(data):
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    db = SessionLocal()
+    try:
+        decoded = decode_token(token)
+        current_user = decoded["sub"]
+        user = db.query(models.Users).filter_by(username=current_user).first()
+        current_user_id = user.id
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    try:
+        item_name = data.get("item_name","")
+        entity_id = data.get("entity_id","")
+        touch = data.get("touch",0)
+        profit = data.get("profit",0)
+        wastage = data.get("wastage",0)
+        item_id = db.query(models.Item).filter(
+            models.Item.name==item_name,
+            models.Item.touch==touch).first().id
+        rule = db.query(models.Rule).filter(
+            models.Rule.item_id == item_id,
+            models.Rule.entity_id == entity_id
+        ).first()
+        if rule:
+            rule.profit_percent = profit
+            rule.wastage_percent = wastage
+            db.commit()
+        else:
+            time = datetime.now(ZoneInfo("Asia/Kolkata"))
+            newRule = models.Rule(
+                item_id = item_id,
+                entity_id = entity_id,
+                profit_percent = profit,
+                wastage_percent = wastage,
+                created_at = time,
+                updated_at = time,
+                created_by = current_user_id,
+            )
+            db.add(newRule)
+            db.commit()
+    except Exception as e:
+        print("Error:",e)
+        socketio.emit("error",{"message":"Error At Save Item Rule!!"})
     finally:
         db.close()
 
