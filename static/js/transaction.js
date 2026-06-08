@@ -42,7 +42,7 @@ function addTransaction() {
 
             <label>Name</label>
             <div class="input-wrapper">
-                <input id="name" placeholder="Enter name" value="${current_name}" autocomplete="off">
+                <input id="name" placeholder="Enter name" autocomplete="off" value="${current_name}">
                 <div id="nameDropdown" class="dropdown"></div>
             </div>
 
@@ -57,6 +57,7 @@ function addTransaction() {
                 <div>Wastage %</div>
                 <div>Stone Less</div>
                 <div>Qty</div>
+                <div>Final Weight</div>
             </div>
 
             <div id="itemsContainer"></div>
@@ -67,51 +68,70 @@ function addTransaction() {
 
             <div class="bottom-panel">
 
-                <!-- EMPTY -->
-                <div></div>
+                <!-- ===================================
+                    SUMMARY ROW
+                ==================================== -->
+                <div class="bottom-summary-row">
 
-                <!-- BELOW BASE WT -->
-                <input disabled id="bottomBaseWeight" type="number">
+                    <div></div>
 
-                <!-- EMPTY -->
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
+                    <input disabled id="bottomBaseWeight" type="number">
 
-                <!-- EMPTY -->
-                <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
 
-                <!-- BELOW QTY -->
-                <input disabled id="bottomQty" type="number">
+                    <div></div>
 
-                <!-- BELOW FINAL WT -->
-                <input disabled id="bottomFinalWeight" type="number">
+                    <input disabled id="bottomQty" type="number">
 
-                <!-- EMPTY -->
-                <div></div>
+                    <input disabled id="bottomFinalWeight" type="number">
 
-            
+                    <div></div>
+                    <div></div>
+                    <div></div>
 
+                </div>
 
-                <input id="goldRate" type="number" placeholder="Gold Rate">
+                <!-- ===================================
+                    ACTION ROW
+                ==================================== -->
+                <div class="bottom-action-row">
 
-                <input id="cash" type="number" placeholder="Cash Adjustment">
+                    <input id="goldRate"
+                        type="number"
+                        placeholder="Gold Rate">
 
-                <button onclick="saveTransaction()">Save</button>
+                    <input id="cash"
+                        type="number"
+                        placeholder="Cash Adjustment">
 
-                <button class="cancel-btn" onclick="cancelTransaction()">
-                    Cancel
-                </button>
+                    <button id="changeCash" onclick="changeCashMode()">
+                        Hand Cash
+                    </button>
 
-                <!-- EMPTY -->
-                <div></div>
-                <div></div>
-                
-                <h3> New </h3>
-                <h3> Balance: </h3>
-                <h3> <b id="new_balance"> - </b> </h3>
+                    <button onclick="saveTransaction()">
+                        Save
+                    </button>
 
+                    <button class="cancel-btn"
+                            onclick="cancelTransaction()">
+                        Cancel
+                    </button>
+
+                    <!-- RIGHT SIDE -->
+                    <div class="balance-group">
+
+                        <h3>New Balance:</h3>
+
+                        <h3>
+                            <b id="new_balance">-</b>
+                        </h3>
+
+                    </div>
+
+                </div>
 
             </div>
         </div>
@@ -125,13 +145,76 @@ function addTransaction() {
         document.getElementById("old_balance").dataset.realValue = old_balance;
     });
 
+    document.getElementById("name").focus();
+
     // setupAutocomplete("name","transactionEntityName",(input,item,type)=>{
     //     input.value = item[type];
     // });
+
+    const goldRate = document.getElementById("goldRate");
+    const cash = document.getElementById("cash");
+    const changeCashModeBtn = document.getElementById("changeCash");
+
+    let currentDiv = null;
+
+    goldRate.addEventListener("input",()=>{
+        currentDiv = goldRateCash(goldRate,cash,currentDiv);
+    });
+
+    cash.addEventListener("input",()=>{
+        currentDiv = goldRateCash(goldRate,cash,currentDiv);
+    });
+
+    changeCashModeBtn.addEventListener("click",()=>{
+        if(cashMode == "cash"){
+            cashMode = "rgts";
+            changeCashModeBtn.innerHTML = "Rtgs Cash";
+        }
+        else{
+            cashMode = "cash";
+            changeCashModeBtn.innerHTML = "Hand Cash";
+        }
+        currentDiv = goldRateCash(goldRate,cash,currentDiv);
+    });
+}
+
+let cashMode = "cash";
+
+function goldRateCash(goldRate,cash,currentDiv){
+    if (!currentDiv || !document.body.contains(currentDiv)) {
+        currentDiv = addItemRow();
+    }
+    let inputs = currentDiv.querySelectorAll("input");
+    let btn = document.getElementById("changeCash");
+    if(cashMode=="cash"){
+        inputs[0].value = "Cash Gold";
+    }
+    else{
+        inputs[0].value = "Rtgs Gold";
+    }
+    const weight = parseFloat(cash.value/goldRate.value);
+    inputs[1].value = weight.toFixed(3); 
+    inputs[1].dataset.realValue = weight;
+    inputs[2].value = 100;
+    inputs[9].value = cash.value;
+
+    inputs.forEach(input=>{
+        input.disabled = true;
+    });
+
+    recalculate();    
+    
+    return currentDiv;
+}
+
+function recalculate(){
+    const rows = document.querySelectorAll(".item-row");
+    calculate_global_final_values(rows);
 }
 
 /* SAVE */
 function saveTransaction() {
+    recalculate();
     const name = document.getElementById("name").value;
     const old_balance = parseFloat(document.getElementById("old_balance").dataset.realValue || 0);
 
@@ -144,6 +227,7 @@ function saveTransaction() {
 
     rows.forEach(r => {
         const inputs = r.querySelectorAll("input");
+        if(inputs[0].value=="") return;
         const buttons = r.querySelectorAll("button");
 
         const item = {
@@ -214,7 +298,12 @@ function addItemRow(item = {}) {
 
         <input id="${itemId}Touch" type="number" placeholder="Touch" value="${item.touch || 92}">
 
-        <input placeholder="Seal" value="${item.seal || ""}">
+        <!-- <input placeholder="Seal" value="${item.seal || ""}"> -->
+
+        <div class="input-wrapper">
+            <input id="${itemId}Seal" placeholder="Seal" autocomplete="off" value="${item.seal || ""}">
+            <div id="${itemId}SealDropdown" class="dropdown"></div>
+        </div>
 
         <input id="${itemId}Profit" type="number" placeholder="Profit %" value="${item.profit_percent || ""}">
         <input id="${itemId}Wastage" type="number" placeholder="Wastage %" value="${item.wastage_percent || ""}">
@@ -298,6 +387,10 @@ function addItemRow(item = {}) {
     },() => {return document.getElementById("name").value || ""}
     );
 
+    setupAutocomplete(itemId+"Seal","entityName",(input,item,type)=>{
+        input.value = item[type];
+    });
+
     return div;
 }
 
@@ -334,8 +427,19 @@ EXCEL STYLE NAVIGATION
 ========================================= */
 
 document.addEventListener("keydown", (e) => {
-
     const active = document.activeElement;
+
+    const currentDropdown =
+        document.getElementById(
+            active.id + "Dropdown"
+        );
+
+    if (
+        currentDropdown &&
+        currentDropdown.children.length > 0
+    ) {
+        return;
+    }
 
     // ONLY INSIDE ITEM ROW
     if (
@@ -471,6 +575,7 @@ document.addEventListener("keydown", (e) => {
 
 /* CANCEL */
 function cancelTransaction() {
+    current_name = "";
     getTransaction();
 }
 
@@ -492,7 +597,10 @@ function calculate_final_value(inputs){
         inputs[8].value = "";
         return;
     }
-    const baseweight = parseFloat(inputs[1].value || 0);
+    let baseweight_temp = 0;
+    if(inputs[1].dataset.realValue) baseweight_temp = parseFloat(inputs[1].dataset.realValue);
+    else baseweight_temp = parseFloat(inputs[1].value || 0);
+    const baseweight = baseweight_temp;
     const touch = parseFloat(inputs[2].value || 0);
     const profit = parseFloat(inputs[4].value || 0);
     const wastage = parseFloat(inputs[5].value || 0);
@@ -596,51 +704,70 @@ socket.on("triggerEditTransactionSequenceFromServer",(data)=>{
 
             <div class="bottom-panel">
 
-                <!-- EMPTY -->
-                <div></div>
+                <!-- ===================================
+                    SUMMARY ROW
+                ==================================== -->
+                <div class="bottom-summary-row">
 
-                <!-- BELOW BASE WT -->
-                <input disabled id="bottomBaseWeight" type="number">
+                    <div></div>
 
-                <!-- EMPTY -->
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
+                    <input disabled id="bottomBaseWeight" type="number">
 
-                <!-- EMPTY -->
-                <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
 
-                <!-- BELOW QTY -->
-                <input disabled id="bottomQty" type="number">
+                    <div></div>
 
-                <!-- BELOW FINAL WT -->
-                <input disabled id="bottomFinalWeight" type="number">
+                    <input disabled id="bottomQty" type="number">
 
-                <!-- EMPTY -->
-                <div></div>
+                    <input disabled id="bottomFinalWeight" type="number">
 
-            
+                    <div></div>
+                    <div></div>
+                    <div></div>
 
+                </div>
 
-                <input id="goldRate" type="number" placeholder="Gold Rate">
+                <!-- ===================================
+                    ACTION ROW
+                ==================================== -->
+                <div class="bottom-action-row">
 
-                <input id="cash" type="number" placeholder="Cash Adjustment">
+                    <input id="goldRate"
+                        type="number"
+                        placeholder="Gold Rate">
 
-                <button onclick="saveEditTransaction()">Save</button>
+                    <input id="cash"
+                        type="number"
+                        placeholder="Cash Adjustment">
 
-                <button class="cancel-btn" onclick="cancelTransaction()">
-                    Cancel
-                </button>
+                    <button id="changeCash" onclick="changeCashMode()">
+                        Hand Cash
+                    </button>
 
-                <!-- EMPTY -->
-                <div></div>
-                <div></div>
-                
-                <h3> New </h3>
-                <h3> Balance: </h3>
-                <h3> <b id="new_balance"> - </b> </h3>
+                    <button onclick="saveEditTransaction()">
+                        Save
+                    </button>
 
+                    <button class="cancel-btn"
+                            onclick="cancelTransaction()">
+                        Cancel
+                    </button>
+
+                    <!-- RIGHT SIDE -->
+                    <div class="balance-group">
+
+                        <h3>New Balance:</h3>
+
+                        <h3>
+                            <b id="new_balance">-</b>
+                        </h3>
+
+                    </div>
+
+                </div>
 
             </div>
         </div>
@@ -654,6 +781,8 @@ socket.on("triggerEditTransactionSequenceFromServer",(data)=>{
     document.getElementById("old_balance").dataset.realValue = data.old_balance;
     document.getElementById("old_balance").dataset.backup = data.old_balance;
     document.getElementById("new_balance").innerHTML = data.new_balance;
+    document.getElementById("goldRate").value = data.goldRate;
+    document.getElementById("cash").value = data.cash;
     // document.getElementById("bottomBaseWeight").value = parseFloat(data.base_weight.toFixed(3));
     // document.getElementById("bottomBaseWeight").dataset.realValue = dataset.base_weight;
     // document.getElementById("bottomFinalWeight").value = parseFloat(data.final_weight.toFixed(3));
@@ -672,7 +801,64 @@ socket.on("triggerEditTransactionSequenceFromServer",(data)=>{
         document.getElementById("old_balance").innerHTML = parseFloat(old_balance.toFixed(3) || 0);
         document.getElementById("old_balance").dataset.realValue = old_balance;
     });
+
+
+    const goldRate = document.getElementById("goldRate");
+    const cash = document.getElementById("cash");
+    const changeCashModeBtn = document.getElementById("changeCash");
+
+    let currentDiv = findCashGoldRow();
+        
+    // goldRateCash(goldRate,cash,currentDiv);
+
+    goldRate.addEventListener("input",()=>{
+        currentDiv = goldRateCash(goldRate,cash,currentDiv);
+    });
+
+    cash.addEventListener("input",()=>{
+        currentDiv = goldRateCash(goldRate,cash,currentDiv);
+    });
+
+    changeCashModeBtn.addEventListener("click",()=>{
+        if(cashMode == "cash"){
+            cashMode = "rgts";
+            changeCashModeBtn.innerHTML = "Rtgs Cash";
+        }
+        else{
+            cashMode = "cash";
+            changeCashModeBtn.innerHTML = "Hand Cash";
+        }
+        currentDiv = goldRateCash(goldRate,cash,currentDiv);
+    });
 });
+
+function findCashGoldRow() {
+    const rows = document.querySelectorAll(".item-row");
+
+    for(const row of rows){
+        const inputs = row.querySelectorAll("input");
+
+        if(inputs[0].value == "Cash Gold"){
+            inputs.forEach(input=>{
+                input.disabled=true;
+            });
+            document.getElementById("changeCash").innerHTML = "Cash Gold";
+            cashMode = "cash";
+            return row;
+        }
+
+        if(inputs[0].value == "Rtgs Gold"){
+            inputs.forEach(input=>{
+                input.disabled=true;
+            });
+            document.getElementById("changeCash").innerHTML = "Rtgs Gold";
+            cashMode = "rtgs";
+            return row;
+        }
+    }
+
+    return null;
+}
 
 function saveEditTransaction(){
     const name = document.getElementById("name").value;
@@ -687,6 +873,7 @@ function saveEditTransaction(){
 
     rows.forEach(r => {
         const inputs = r.querySelectorAll("input");
+        if(inputs[0].value=="") return;
         const buttons = r.querySelectorAll("button");
 
         const item = {

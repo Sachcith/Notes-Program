@@ -18,13 +18,13 @@ socket.on("entityData",(e)=>{
             const div = document.createElement("div");
             div.className = "page";
             div.onclick = () => {
-                selectPage(div, d)
+                selectPage(div, d);
                 openEntityPage();
             };
 
             div.innerHTML = `
                 <b>${d.name || "New Entry"}</b><br>
-                Old Balance: ${d.balance.toFixed(3) || 0}<br>
+                Old Balance: ${parseFloat(d.balance.toFixed(3) || 0)}<br>
                 <small>${d.location || ""}</small>
             `;
 
@@ -215,6 +215,8 @@ CLIENT DASHBOARD PAGE
 ERP STYLE
 ========================================= */
 
+let dashboardMode = "transactions";
+
 function openEntityPage() {
 
     const grid = document.getElementById("grid");
@@ -225,10 +227,7 @@ function openEntityPage() {
 
     <div class="dashboard-page">
 
-        <!-- =====================================
-        HERO SECTION
-        ====================================== -->
-
+        <!-- HERO -->
         <div class="dashboard-hero">
 
             <div class="hero-left">
@@ -249,6 +248,10 @@ function openEntityPage() {
                     Edit Client
                 </button>
 
+                <button class="hero-btn" onclick="clearBalance()">
+                    Nil Balance
+                </button>
+
                 <button class="hero-btn cancel-btn" onclick="deleteEntity()">
                     Delete Client
                 </button>
@@ -257,10 +260,7 @@ function openEntityPage() {
 
         </div>
 
-        <!-- =====================================
-        STATS CARDS
-        ====================================== -->
-
+        <!-- STATS -->
         <div class="stats-grid">
 
             <div class="stat-card">
@@ -295,67 +295,219 @@ function openEntityPage() {
 
         </div>
 
-        <!-- =====================================
-        ITEMS SECTION
-        ====================================== -->
+        <!-- MODE SWITCH -->
+        <div class="dashboard-modes">
 
-        <div class="dashboard-section">
+            <button
+                id="transactionsModeBtn"
+                class="dashboard-mode-btn active"
+                onclick="switchDashboardMode('transactions')"
+            >
+                Transactions
+            </button>
 
-            <div class="section-top">
-
-                <h2>
-                    Item Configuration
-                </h2>
-
-                <button
-                    class="add-item-btn"
-                    onclick="addDashboardItemRow()"
-                >
-                    + Add Item
-                </button>
-
-            </div>
-
-            <!-- =================================
-            HEADER
-            ================================== -->
-
-            <div class="dashboard-header-row">
-
-                <div>Item Name</div>
-
-                <div>Touch</div>
-
-                <div>Default Profit %</div>
-
-                <div>Default Wastage %</div>
-
-                <div>Actions</div>
-
-            </div>
-
-            <!-- =================================
-            ITEMS
-            ================================== -->
-
-            <div id="itemsContainer"></div>
+            <button
+                id="itemsModeBtn"
+                class="dashboard-mode-btn"
+                onclick="switchDashboardMode('items')"
+            >
+                Items
+            </button>
 
         </div>
+
+        <!-- CONTENT -->
+        <div id="dashboardContent"></div>
 
     </div>
     `;
 
-    socket.emit("addItemsForEntitiesSequence",{
-        token: localStorage.getItem("token"),
-        entity_id: client.id,
-    });
+    renderDashboardContent();
+}
 
-    // if (client.items) {
+function switchDashboardMode(mode){
 
-    //     client.items.forEach(item => {
-    //         addDashboardItemRow(item);
-    //     });
-    // }
+    dashboardMode = mode;
+
+    document
+        .getElementById("transactionsModeBtn")
+        .classList.remove("active");
+
+    document
+        .getElementById("itemsModeBtn")
+        .classList.remove("active");
+
+    if(mode === "transactions"){
+        document
+            .getElementById("transactionsModeBtn")
+            .classList.add("active");
+    }
+    else{
+        document
+            .getElementById("itemsModeBtn")
+            .classList.add("active");
+    }
+
+    renderDashboardContent();
+}
+
+function renderDashboardContent(){
+
+    const container =
+        document.getElementById("dashboardContent");
+
+    /* =====================================
+    TRANSACTIONS MODE
+    ====================================== */
+
+    if(dashboardMode === "transactions"){
+
+        container.innerHTML = `
+
+            <div class="dashboard-section">
+
+                <div class="section-top">
+
+                    <h2>
+                        Transactions
+                    </h2>
+
+                    <button
+                        class="add-item-btn"
+                        onclick="addTransaction()"
+                    >
+                        + Add Transaction
+                    </button>
+
+                </div>
+
+                <!-- =================================
+                PHOTO SENT
+                ================================== -->
+
+                <div class="transaction-group">
+
+                    <div class="transaction-group-top">
+
+                        <h3>
+                            Photo Sent
+                        </h3>
+
+                    </div>
+
+                    <!-- HEADER -->
+                    <div class="transaction-header-row">
+
+                        <div>Date</div>
+                        <div>Item Name</div>
+                        <div>Touch</div>
+                        <div>Base Weight</div>
+                        <div>Stone Less</div>
+                        <div>Wastage</div>
+                        <div>Final Pure</div>
+
+                    </div>
+
+                    <!-- ROWS -->
+                    <div id="sentTransactionsContainer"></div>
+
+                </div>
+
+                <!-- =================================
+                PHOTO NOT SENT
+                ================================== -->
+
+                <div class="transaction-group">
+
+                    <div class="transaction-group-top">
+
+                        <h3>
+                            Pending Photo
+                        </h3>
+
+                        <button
+                            class="hero-btn"
+                            onclick="capturePendingTransactions()"
+                        >
+                            Capture & Send
+                        </button>
+
+                    </div>
+
+                    <!-- HEADER -->
+                    <div class="transaction-header-row">
+
+                        <div>Date</div>
+                        <div>Item Name</div>
+                        <div>Touch</div>
+                        <div>Base Weight</div>
+                        <div>Stone Less</div>
+                        <div>Wastage</div>
+                        <div>Final Pure</div>
+
+                    </div>
+
+                    <!-- ROWS -->
+                    <div id="pendingTransactionsContainer"></div>
+
+                </div>
+
+            </div>
+
+        `;
+        loadTransactions();
+    }
+
+    /* =====================================
+    ITEMS MODE
+    ====================================== */
+
+    else{
+
+        container.innerHTML = `
+
+            <div class="dashboard-section">
+
+                <div class="section-top">
+
+                    <h2>
+                        Item Configuration
+                    </h2>
+
+                    <button
+                        class="add-item-btn"
+                        onclick="addDashboardItemRow()"
+                    >
+                        + Add Item
+                    </button>
+
+                </div>
+
+                <div class="dashboard-header-row">
+
+                    <div>Item Name</div>
+
+                    <div>Touch</div>
+
+                    <div>Default Profit %</div>
+
+                    <div>Default Wastage %</div>
+
+                    <div>Actions</div>
+
+                </div>
+
+                <div id="itemsContainer"></div>
+
+            </div>
+
+        `;
+
+        socket.emit("addItemsForEntitiesSequence",{
+            token: localStorage.getItem("token"),
+            entity_id: selectedPage.d.id,
+        });
+    }
 }
 
 socket.on("addItemsForEntities",(data)=>{
@@ -530,13 +682,264 @@ function addDashboardItemRow(item = {}) {
 
     deleteBtn.addEventListener("click", () => {
 
+        if(editBtn.innerText == "Save"){
+            confirm("Save Rule To Delete Item");
+            editBtn.focus();
+            return;
+        }
+
         const ok =
-            confirm("Delete this item?");
+            confirm("Delete this Item?");
 
         if (!ok) return;
 
         row.remove();
+
+        socket.emit("deleteRule",{
+            token: localStorage.getItem("token"),
+            itemName: inputs[0].value,
+            touch: parseFloat(inputs[1].value),
+            entity_id: selectedPage.d.id,
+        });
     });
 
     return row;
 }
+
+socket.on("deleteRuleOk",(e)=>{
+    console.log("Rule Deleted Successfully!!");
+});
+
+/* =========================================
+FORMAT DATE
+YYYY-MM-DD -> DD/MM/YYYY
+========================================= */
+
+function formatDate(dateString){
+
+    if(!dateString) return "";
+
+    const parts = dateString.split("-");
+
+    if(parts.length !== 3){
+        return dateString;
+    }
+
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+/* =========================================
+ADD TRANSACTION ROW
+========================================= */
+
+function addTransactionRow(
+    transaction,
+    containerId,
+    showDate = true
+){
+
+    const container =
+        document.getElementById(containerId);
+
+    if(!container) return;
+
+    const row =
+        document.createElement("div");
+
+    row.className =
+        "transaction-row";
+
+    row.dataset.id =
+        transaction.transaction_item_id || "";
+
+    row.innerHTML = `
+
+        <!-- DATE -->
+        <div class="transaction-date">
+            ${showDate
+                ? formatDate(transaction.date)
+                : ""}
+        </div>
+
+        <!-- ITEM -->
+        <div class="transaction-item-name">
+            ${transaction.item_name || "-"}
+        </div>
+
+        <!-- TOUCH -->
+        <div>
+            ${transaction.touch ?? "-"}
+        </div>
+
+        <!-- BASE WEIGHT -->
+        <div>
+            ${
+                transaction.base_weight != null
+                ? Number(transaction.base_weight).toFixed(3)
+                : "-"
+            }
+        </div>
+
+        <!-- STONE LESS -->
+        <div>
+            ${
+                transaction.stone_less != null
+                ? Number(transaction.stone_less).toFixed(3)
+                : "-"
+            }
+        </div>
+
+        <!-- WASTAGE -->
+        <div>
+            ${
+                transaction.wastage != null
+                ? Number(transaction.wastage).toFixed(2)
+                : "-"
+            }
+        </div>
+
+        <!-- FINAL PURE -->
+        <div>
+            ${
+                transaction.final_pure != null
+                ? (
+                    transaction.type === "PURCHASE"
+                        ? -Number(transaction.final_pure)
+                        : Number(transaction.final_pure)
+                ).toFixed(3)
+                : "-"
+            }
+        </div>
+
+    `;
+
+    container.appendChild(row);
+}
+
+/* =========================================
+SOCKET RECEIVE
+========================================= */
+
+socket.on("entityTransactions",(data)=>{
+
+    if(!data || !data.transactions){
+        return;
+    }
+
+    renderTransactions(
+        data.transactions
+    );
+});
+
+/* =========================================
+RENDER TRANSACTIONS
+========================================= */
+
+function renderTransactions(data){
+
+    const pendingContainer =
+        document.getElementById(
+            "pendingTransactionsContainer"
+        );
+
+    const sentContainer =
+        document.getElementById(
+            "sentTransactionsContainer"
+        );
+
+    if(pendingContainer){
+        pendingContainer.innerHTML = "";
+    }
+
+    if(sentContainer){
+        sentContainer.innerHTML = "";
+    }
+
+    /* =====================================
+    SORT BY DATE DESCENDING
+    ====================================== */
+
+    // data.sort((a,b)=>{
+
+    //     return new Date(b.date)
+    //         - new Date(a.date);
+    // });
+
+    let lastPendingDate = "";
+    let lastSentDate = "";
+
+    data.forEach(transaction => {
+
+        /* =================================
+        PENDING PHOTO
+        ================================= */
+
+        if(
+            transaction.photo_sent === "NOT_SENT"
+        ){
+
+            const showDate =
+                lastPendingDate !==
+                transaction.date;
+
+            addTransactionRow(
+                transaction,
+                "pendingTransactionsContainer",
+                showDate
+            );
+
+            lastPendingDate =
+                transaction.date;
+        }
+
+        /* =================================
+        PHOTO SENT
+        ================================= */
+
+        else{
+
+            const showDate =
+                lastSentDate !==
+                transaction.date;
+
+            addTransactionRow(
+                transaction,
+                "sentTransactionsContainer",
+                showDate
+            );
+
+            lastSentDate =
+                transaction.date;
+        }
+    });
+}
+
+function loadTransactions(){
+
+    socket.emit("getTransactionsForEntity",{
+        token: localStorage.getItem("token"),
+        entity_id: selectedPage.d.id,
+    });
+}
+
+function clearBalance(){
+    if (!selectedPage || !selectedPage.el) {
+        console.error("selectedPage not set");
+        return;
+    }
+
+    const ok = confirm("Are you sure you want to clear balance for "+selectedPage.d.name);
+
+    if (!ok) return;
+    socket.emit("clearBalance",{
+        token: localStorage.getItem("token"),
+        id:selectedPage.d.id,
+    });
+
+
+}
+
+socket.on("clearBalanceOk",(e)=>{
+    console.log("Cleared Balance Successfully!!");
+    openEntityPage();
+});

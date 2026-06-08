@@ -9,7 +9,7 @@ from enum import Enum
 
 from sqlalchemy import Enum as SQLEnum
 
-from sqlalchemy import ForeignKey, Float, UniqueConstraint
+from sqlalchemy import ForeignKey, Float, UniqueConstraint, Boolean
 
 from db import Base, engine
 
@@ -44,6 +44,11 @@ class Entities(Base):
     updated_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
     created_by = Column(Integer)
 
+    delete_bool = Column(Boolean,default=False)
+    delete_time = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
+
+    purge_time = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
+
 class Item(Base):
     __tablename__ = "items"
 
@@ -61,6 +66,11 @@ class Item(Base):
             name='uq_item_name_touch'
         ),
     )
+
+    delete_bool = Column(Boolean,default=False)
+    delete_time = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
+
+    purge_time = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
 
 class Rule(Base):
     __tablename__ = "rules"
@@ -106,11 +116,18 @@ class Transaction(Base):
 
     created_by = Column(Integer)
 
+    delete_bool = Column(Boolean,default=False)
+    delete_time = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
+
+    purge_time = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
+
 class TransactionItem(Base):
     __tablename__ = "transaction_items"
 
     id = Column(Integer, primary_key=True)
     transaction_id = Column(Integer, ForeignKey("transactions.id"))
+
+    item_id = Column(Integer, ForeignKey("items.id"))
     touch = Column(Float)
 
     seal = Column(Integer, ForeignKey("entities.id"))
@@ -128,6 +145,11 @@ class TransactionItem(Base):
     cash = Column(Float)
 
     created_by = Column(Integer)
+
+    delete_bool = Column(Boolean,default=False)
+    delete_time = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
+
+    purge_time = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
 
 class Location(Base):
     __tablename__ = "location_colors"
@@ -157,6 +179,20 @@ class Stock(Base):
     item_id = Column(Integer, ForeignKey("items.id"))
     
     current_stock = Column(Float,default=0)
+
+    delete_bool = Column(Boolean,default=False)
+    delete_time = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
+
+    purge_time = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
+
+class RecycleBin(Base):
+    __tablename__ = "recyclebin"
+
+    id = Column(Integer,primary_key=True)
+
+    table_type = Column(String)
+    delete_ids = Column(String) # Json Stored as String
+    
 
 
 Base.metadata.create_all(engine)

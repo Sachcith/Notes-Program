@@ -15,11 +15,12 @@ socket.on("stockData",(e)=>{
         const div = document.createElement("div");
         div.className = "page";
         div.onclick = () => selectPage(div, d);
+        const current_stock = d.current_stock;
 
         div.innerHTML = `
             <b>${d.name || "New Entry"}</b><br>
             Touch: ${d.touch || 0}<br>
-            Current Stock: ${d.current_stock}<br>
+            Current Stock: ${parseFloat(current_stock.toFixed(3))}<br>
         `;
 
         grid.appendChild(div);
@@ -34,7 +35,10 @@ function addStock(){
         <h2>Add Stock</h2>
 
         <label>Name</label>
-        <input id="name" placeholder="Enter name" value="${current_name}">
+        <div class="input-wrapper">
+            <input id="name" placeholder="Enter Item Name" value="${current_name}" autocomplete="off">
+            <div id="nameDropdown" class="dropdown"></div>
+        </div>
 
         <label>Touch</label>
         <input id="touch" type="number" step="any" placeholder="Enter touch value" value=92>
@@ -49,6 +53,13 @@ function addStock(){
     </div>
     `;
     document.getElementById("name").focus();
+
+    setupAutocomplete("name","itemName",(input,item,type)=>{
+        input.value = item[type];
+        const inputId = input.id;
+        let touch = document.getElementById("touch");
+        touch.value = item["itemTouch"];
+    });
 }
 
 function cancelStock(){
@@ -67,13 +78,16 @@ function editStock() {
         <h2>Edit Stock</h2>
 
         <label>Name</label>
-        <input id="name" placeholder="Enter name" value="${current_name}">
+        <div class="input-wrapper">
+            <input id="name" placeholder="Enter Item Name" value="${d.name}" autocomplete="off">
+            <div id="nameDropdown" class="dropdown"></div>
+        </div>
 
         <label>Touch</label>
-        <input id="touch" type="number" step="any" placeholder="Enter touch value" value=92>
+        <input id="touch" type="number" step="any" placeholder="Enter touch value" value=${d.touch}>
 
         <label>Current Stock</label>
-        <input id="current_stock" type="number" step="any" placeholder="Enter Current Stock">
+        <input id="current_stock" type="number" step="any" placeholder="Enter Current Stock" value=${d.current_stock}>
 
         <div class="actions">
             <button onclick="saveStockEdit()">Save</button>
@@ -81,14 +95,21 @@ function editStock() {
     </div>
     `;
 
+    setupAutocomplete("name","itemName",(input,item,type)=>{
+        input.value = item[type];
+        const inputId = input.id;
+        let touch = document.getElementById("touch");
+        touch.value = item["itemTouch"];
+    });
+
 }
 
 function saveStock(){
     let data = {
         token: localStorage.getItem("token"),
         name: document.getElementById("name").value,
-        touch: document.getElementById("touch").value,
-        current_stock: document.getElementById("current_stock").value,
+        touch: parseFloat(document.getElementById("touch").value || 0),
+        current_stock: parseFloat(document.getElementById("current_stock").value || 0),
     }
     socket.emit("saveStock",data);
 }
@@ -97,21 +118,26 @@ function saveStockEdit(){
     let data = {
         token: localStorage.getItem("token"),
         name: document.getElementById("name").value,
-        touch: document.getElementById("touch").value,
-        current_stock: document.getElementById("current_stock").value,
+        touch: parseFloat(document.getElementById("touch").value || 0),
+        current_stock: parseFloat(document.getElementById("current_stock").value || 0),
         id: selectedPage.d.id,
     }
     socket.emit("saveStockEdit",data);
 }
 
+socket.on("stockAlert",(data)=>{
+    confirm(data.message);
+    document.getElementById("name").focus();
+});
+
 socket.on("saveStockOk",(e)=>{
     console.log("New Stock Saved Successfully");
-    getItem();
+    getStock();
 });
 
 socket.on("editStockOk",(e)=>{
     console.log("Stock Edited and Saved Successfully");
-    getItem();
+    getStock();
 });
 
 function deleteStock(){

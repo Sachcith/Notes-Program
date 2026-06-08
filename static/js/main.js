@@ -470,8 +470,8 @@ function setupAutocomplete(inputId, type, callback = null,entity_name = null) {
 
     const searchEvent = `search${typeName}`;
     const resultsEvent = `${typeName}Results`;
-    console.log(searchEvent);
-    console.log(resultsEvent);
+    // console.log(searchEvent);
+    // console.log(resultsEvent);
 
     let activeIndex = -1;
     let currentList = [];
@@ -494,35 +494,58 @@ function setupAutocomplete(inputId, type, callback = null,entity_name = null) {
         }
     }
 
-    // function renderList(list = []) {
+    function tryAutoSelect() {
 
-    //     currentList = list;
+        const value = input.value.trim().toLowerCase();
 
-    //     clearDropdown();
+        if (!value) {
+            input.classList.remove("autocomplete-error");
+            return;
+        }
 
-    //     list.forEach((item, index) => {
+        const matchedItem = currentList.find((item) => {
 
-    //         const div = document.createElement("div");
+            const temp = (item[type] || "").trim().toLowerCase();
 
-    //         // 🔥 text shown in dropdown
-    //         // div.innerText =
-    //         //     item.name ||
-    //         //     item.location ||
-    //         //     item.value ||
-    //         //     "Unknown";
-    //         div.innerText = item[type];
+            return temp === value;
+        });
 
-    //         div.onclick = () => {
-    //             selectItem(item);
-    //         };
+        // ✅ Exact match found
+        if (matchedItem) {
 
-    //         div.addEventListener("mousedown", (e) => {
-    //             e.preventDefault();
-    //         });
+            input.classList.remove("autocomplete-error");
 
-    //         dropdown.appendChild(div);
-    //     });
-    // }
+            selectItem(matchedItem);
+
+            return;
+        }
+
+        // ✅ If only one result exists → auto select
+        if (currentList.length === 1) {
+
+            input.classList.remove("autocomplete-error");
+
+            selectItem(currentList[0]);
+
+            return;
+        }
+
+        // ❌ No valid match
+        input.classList.add("autocomplete-error");
+    }
+
+    input.addEventListener("keydown", onKeyDown);
+
+    input.addEventListener("blur", () => {
+
+        setTimeout(() => {
+
+            tryAutoSelect();
+
+            clearDropdown();
+
+        }, 150);
+    });
 
     function renderList(list = []) {
 
@@ -547,7 +570,7 @@ function setupAutocomplete(inputId, type, callback = null,entity_name = null) {
             const div = document.createElement("div");
 
             let temp = "";
-            if(item["tempTouch"]) temp = " "+item["itemTouch"];
+            if(item["itemTouch"]) temp = " "+item["itemTouch"];
 
             div.innerText = item[type]+temp;
 
@@ -564,10 +587,12 @@ function setupAutocomplete(inputId, type, callback = null,entity_name = null) {
     }
 
     function onInput() {
+        
+        input.classList.remove("autocomplete-error");
 
         const entityName =
         typeof entity_name === "function" ? entity_name() : entity_name;
-        console.log(entityName);
+        // console.log(entityName);
 
         socket.emit(searchEvent, {
             token: localStorage.getItem("token"),
@@ -581,7 +606,17 @@ function setupAutocomplete(inputId, type, callback = null,entity_name = null) {
 
         const items = dropdown.querySelectorAll("div");
 
-        if (!items.length) return;
+        if (!items.length) {
+
+            if (e.key === "Enter") {
+                return;
+            }
+
+            return;
+        }
+
+        // 🔥 stop global excel navigation
+        e.stopPropagation();
 
         if (e.key === "ArrowDown") {
 
@@ -613,26 +648,35 @@ function setupAutocomplete(inputId, type, callback = null,entity_name = null) {
         }
     }
 
-    input.addEventListener("input", onInput);
+    function isDropdownOpen() {
+        return dropdown.children.length > 0;
+    }
 
-    input.addEventListener("keydown", onKeyDown);
+    input.addEventListener("input", onInput);
 
     dropdown.addEventListener("mousedown", (e) => {
         e.preventDefault();
     });
 
-    // 🔥 remove old listener
-    if (autocompleteRegistry[resultsEvent]) {
+    // // 🔥 remove old listener
+    // if (autocompleteRegistry[resultsEvent]) {
 
-        socket.off(
-            resultsEvent,
-            autocompleteRegistry[resultsEvent]
-        );
-    }
+    //     socket.off(
+    //         resultsEvent,
+    //         autocompleteRegistry[resultsEvent]
+    //     );
+    // }
 
-    autocompleteRegistry[resultsEvent] = renderList;
+    // autocompleteRegistry[resultsEvent] = renderList;
 
-    socket.on(resultsEvent, renderList);
+    // socket.on(resultsEvent, renderList);
+    socket.on(resultsEvent, (list) => {
+
+        // only render for THIS input
+        if (document.activeElement === input) {
+            renderList(list);
+        }
+    });
 }
 
 

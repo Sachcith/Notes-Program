@@ -199,6 +199,10 @@ input {
     overflow-y: auto;
 }
 
+.dropdown:empty {
+    display: none;
+}
+
 .dropdown div {
     padding: 8px;
     cursor: pointer;
@@ -214,26 +218,116 @@ input {
 /* ===============================
    ITEM GRID (TABLE STRUCTURE)
 ================================= */
+/* ===============================
+   ITEM GRID (TABLE STRUCTURE)
+================================= */
 .item-row,
-.header-row,
-.bottom-panel {
+.header-row {
+
     display: grid;
 
     grid-template-columns:
-        minmax(140px, 2fr)  /* Item */
+        minmax(140px, 2fr)
         repeat(11, minmax(80px, 1fr));
 
     gap: 8px;
+
     align-items: center;
+}
+
+/* ===============================
+   BOTTOM PANEL
+================================= */
+
+.bottom-panel {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 12px;
+
+    position: sticky;
+
+    bottom: 0;
+
+    background: #111;
+
+    border-top: 2px solid var(--accent);
+
+    padding-top: 10px;
+
+    margin-top: 10px;
+
+    z-index: 100;
+}
+
+/* ===============================
+   SUMMARY ROW
+================================= */
+
+.bottom-summary-row {
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(140px, 2fr)
+        repeat(11, minmax(80px, 1fr));
+
+    gap: 8px;
+
+    align-items: center;
+}
+
+/* ===============================
+   ACTION ROW
+================================= */
+
+.bottom-action-row {
+
+    display: flex;
+
+    /* justify-content: space-between; */
+
+    align-items: center;
+
+    gap: 10px;
+
+    flex-wrap: wrap;
+}
+
+/* ===============================
+   ACTION ITEMS
+================================= */
+
+.bottom-action-row input,
+.bottom-action-row button {
+
+    width:10%;
+
+    min-width: 140px;
+
+    margin: 0;
+}
+
+.balance-group {
+
+    margin-left: auto;
+
+    margin-right: 5%;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
 }
 
 /* ===============================
    PREVENT INPUT BREAKING GRID
 ================================= */
 .item-row input,
-.item-row button,
-.bottom-panel input,
-.bottom-panel button {
+.item-row button {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
@@ -622,4 +716,68 @@ ACTIONS
     border: none;
 
     color: white;
+}
+
+.autocomplete-error {
+    border: 2px solid red !important;
+    background-color: rgba(255, 0, 0, 0.08);
+}
+
+.dashboard-modes{
+    display:flex;
+    gap:10px;
+    margin-top:20px;
+}
+
+.dashboard-mode-btn{
+    padding:10px 18px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+.dashboard-mode-btn.active{
+    font-weight:600;
+}
+
+.transaction-group{
+    margin-top:30px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    overflow:hidden;
+}
+
+.transaction-group-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:16px;
+}
+
+.transaction-header-row,
+.transaction-row{
+    display:grid;
+    grid-template-columns:
+        120px
+        1.5fr
+        80px
+        120px
+        120px
+        120px
+        120px;
+
+    gap:12px;
+    align-items:center;
+
+    padding:14px 16px;
+}
+
+.transaction-header-row{
+    font-weight:600;
+    border-top:1px solid #eee;
+    border-bottom:1px solid #eee;
+}
+
+.transaction-row{
+    border-bottom:1px solid #f3f3f3;
 }
