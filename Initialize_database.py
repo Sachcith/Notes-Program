@@ -180,6 +180,8 @@ class Stock(Base):
     
     current_stock = Column(Float,default=0)
 
+    created_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
+
     delete_bool = Column(Boolean,default=False)
     delete_time = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Kolkata")))
 
@@ -192,7 +194,16 @@ class RecycleBin(Base):
 
     table_type = Column(String)
     delete_ids = Column(String) # Json Stored as String
-    
+
+class Settings(Base):
+    __tablename__ = "settings"
+
+    id = Column(Integer,primary_key=True)
+
+    key = Column(String,nullable=False)
+
+    value = Column(String)
+
 
 
 Base.metadata.create_all(engine)

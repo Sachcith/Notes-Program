@@ -14,6 +14,8 @@ from flask_bcrypt import Bcrypt
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+import json
+
 app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = "this-is-a-much-longer-dev-secret-key-123456"
 jwt = JWTManager(app)
@@ -111,7 +113,7 @@ def getEntity(data=None):
         return
     db = SessionLocal()
     try:
-        entityClass = db.query(models.Entities).all()
+        entityClass = db.query(models.Entities).filter_by(delete_bool=False).all()
         entityData = []
         for entity in entityClass:
             entityData.append({
@@ -233,8 +235,28 @@ def deleteEntity(data):
     try:
         entity = db.query(models.Entities).filter(models.Entities.id == data.get("id")).first()
         if entity:
-            db.delete(entity)
-            db.commit()
+            if entity.delete_bool==False:
+                time = datetime.now(ZoneInfo("Asia/Kolkata"))
+
+                expiry = (time + timedelta(days=60)).replace(
+                    hour=23,
+                    minute=59,
+                    second=59,
+                    microsecond=999999
+                )
+                # db.delete(entity)
+                entity.delete_bool = True
+                entity.delete_time = time
+
+                entity.purge_time = expiry
+
+                newRecycleBin = models.RecycleBin(
+                    table_type = "Entity",
+                    delete_ids = str(entity.id)
+                )
+                db.add(newRecycleBin)
+                db.commit()
+                db.refresh(newRecycleBin)
         socketio.emit("deleteEntityOk",{})
     except Exception as e:
         db.rollback()
@@ -263,7 +285,11 @@ def search_entity(data):
         return
     db = SessionLocal()
     try:
-        entityClass = db.query(models.Entities).filter(models.Entities.name.ilike(f"%{data.get("value")}%"),models.Entities.type == data.get("type").upper()).all()
+        entityClass = db.query(models.Entities).filter(
+            models.Entities.name.ilike(f"%{data.get("value")}%"),
+            models.Entities.type == data.get("type").upper(),
+            models.Entities.delete_bool == False
+        ).all()
         entityData = []
         for entity in entityClass:
             entityData.append({
@@ -307,7 +333,10 @@ def search_entity_name(data):
         return
     db = SessionLocal()
     try:
-        entityClass = db.query(models.Entities).filter(models.Entities.name.ilike(f"%{data.get("value")}%")).distinct().limit(10).all()
+        entityClass = db.query(models.Entities).filter(
+            models.Entities.name.ilike(f"%{data.get("value")}%"),
+            models.Entities.delete_bool == False
+        ).distinct().limit(10).all()
         entityData = []
         for entity in entityClass:
             entityData.append({
@@ -343,7 +372,10 @@ def search_entity_location(data):
         return
     db = SessionLocal()
     try:
-        entityClass = db.query(models.Entities).filter(models.Entities.location.ilike(f"%{data.get("value")}%")).distinct().limit(10).all()
+        entityClass = db.query(models.Entities).filter(
+            models.Entities.location.ilike(f"%{data.get("value")}%"),
+            models.Entities.delete_bool == False
+        ).distinct().limit(10).all()
         entityData = []
         for entity in entityClass:
             entityData.append({"entityLocation":entity.location})
@@ -414,7 +446,10 @@ def search_item_name(data):
         return
     db = SessionLocal()
     try:
-        itemClass = db.query(models.Item).filter(models.Item.name.ilike(f"%{data.get("value")}%")).distinct().limit(10).all()
+        itemClass = db.query(models.Item).filter(
+            models.Item.name.ilike(f"%{data.get("value")}%"),
+            models.Item.delete_bool == False
+        ).distinct().limit(10).all()
         entity = db.query(models.Entities).filter_by(name=data.get("entity_name")).first()
         itemData = []
         for item in itemClass:
@@ -467,7 +502,7 @@ def getItem(data):
         emit("error", {"msg": "invalid token"})
         return
     try:
-        itemClass = db.query(models.Item).all()
+        itemClass = db.query(models.Item).filter_by(delete_bool=False).all()
         itemData = []
         for item in itemClass:
             itemData.append({
@@ -572,9 +607,33 @@ def deleteItem(data):
         return
     try:
         item = db.query(models.Item).filter(models.Item.id == data.get("id")).first()
+        transaction_item = db.query(models.TransactionItem).filter_by(item_id=item.id).first()
+        if transaction_item:
+            socketio.emit("error",{"message":"Item is present in some Transactions, Cannot Delete this Item. Only editing this item is allowed"})
+            return
         if item:
-            db.delete(item)
-            db.commit()
+            if item.delete_bool==False:
+                time = datetime.now(ZoneInfo("Asia/Kolkata"))
+
+                expiry = (time + timedelta(days=60)).replace(
+                    hour=23,
+                    minute=59,
+                    second=59,
+                    microsecond=999999
+                )
+                # db.delete(entity)
+                item.delete_bool = True
+                item.delete_time = time
+
+                item.purge_time = expiry
+
+                newRecycleBin = models.RecycleBin(
+                    table_type = "Item",
+                    delete_ids = str(item.id)
+                )
+                db.add(newRecycleBin)
+                db.commit()
+                db.refresh(newRecycleBin)
         socketio.emit("deleteItemOk",{})
     except Exception as e:
         db.rollback()
@@ -601,7 +660,10 @@ def search_item(data):
         emit("error", {"msg": "invalid token"})
         return
     try:
-        itemClass = db.query(models.Item).filter(models.Item.name.ilike(f"%{data.get("value")}%")).all()
+        itemClass = db.query(models.Item).filter(
+            models.Item.name.ilike(f"%{data.get("value")}%"),
+            models.Item.delete_bool == False
+        ).all()
         itemData = []
         for item in itemClass:
             itemData.append({
@@ -639,13 +701,16 @@ def getTransaction(data=None):
         return
     db = SessionLocal()
     try:
-        transactions = db.query(models.Transaction).order_by(models.Transaction.created_at.desc()).all()
+        transactions = db.query(models.Transaction).filter_by(delete_bool=False).order_by(models.Transaction.created_at.desc()).all()
         transactionData = []
         for bill in transactions:
             entity_id = bill.entity_id
-            entity_name = db.query(models.Entities).filter_by(id=entity_id).first().name
-            entity_location = db.query(models.Entities).filter_by(id=entity_id).first().location
-            entity_type = db.query(models.Entities).filter_by(id=entity_id).first().type
+            entity = db.query(models.Entities).filter_by(id=entity_id).first()
+            if entity.delete_bool:
+                continue
+            entity_name = entity.name
+            entity_location = entity.location
+            entity_type = entity.type
             transactionData.append({
                 "id": bill.id,
                 "name": entity_name,
@@ -806,7 +871,7 @@ def saveTransaction(data):
 def refresh_oldbalance(id,balance=None):
     try:
         db = SessionLocal()
-        latest_data = db.query(models.Transaction).filter_by(entity_id=id).first()
+        latest_data = db.query(models.Transaction).filter_by(entity_id=id).filter_by(delete_bool=False).first()
         if latest_data==None:
             entity = db.query(models.Entities).filter_by(id=id).first()
             entity.balance = entity.opening_balance
@@ -814,7 +879,7 @@ def refresh_oldbalance(id,balance=None):
             db.commit()
             return
         if balance==None:
-            latest_data = db.query(models.Transaction).filter_by(entity_id=id).order_by(models.Transaction.created_at.desc()).first()
+            latest_data = db.query(models.Transaction).filter_by(entity_id=id).filter_by(delete_bool=False).order_by(models.Transaction.created_at.desc()).first()
             updated_balance = latest_data.new_balance
             update_time = datetime.now(ZoneInfo("Asia/Kolkata"))
             entity = db.query(models.Entities).filter_by(id=id).first()
@@ -842,13 +907,14 @@ def get_old_balance(entity_id,created_at=None):
     db = SessionLocal()
     entity = db.query(models.Entities).filter_by(id=entity_id).first()
     if created_at==None:
-        previous_transaction = db.query(models.Transaction).filter_by(entity_id=entity_id).first()
+        previous_transaction = db.query(models.Transaction).filter_by(entity_id=entity_id).filter_by(delete_bool=False).first()
         if previous_transaction!=None:
             return entity.balance
         return entity.opening_balance
     previous_transaction = db.query(models.Transaction).filter(
         models.Transaction.entity_id==entity.id,
-        models.Transaction.created_at < created_at
+        models.Transaction.created_at < created_at,
+        models.Transaction.delete_bool==False,
     ).order_by(models.Transaction.created_at.desc()).first()
     if previous_transaction==None:
         return entity.opening_balance
@@ -1037,6 +1103,8 @@ def saveEditTransaction(data):
                 db.delete(item)
                 db.flush()
                 stock = db.query(models.Stock).filter_by(item_id=item.item_id).first()
+                if stock.created_at<transaction.created_at:
+                    continue
                 if stock:
                     if item.type.name=="PURCHASE":
                         stock.current_stock = stock.current_stock - item.base_weight
@@ -1062,27 +1130,31 @@ def saveEditTransaction(data):
                 if item_id==transactionItem.item_id:
                     stock = db.query(models.Stock).filter_by(item_id=transactionItem.item_id).first()
                     if stock:
-                        if transactionItem.type.name=="PURCHASE":
-                            stock.current_stock = stock.current_stock - transactionItem.base_weight
-                        else:
-                            stock.current_stock = stock.current_stock + transactionItem.base_weight
-                        if item_type=="PURCHASE":
-                            stock.current_stock = stock.current_stock + item.get("baseweight")
-                        else:
-                            stock.current_stock = stock.current_stock - item.get("baseweight")
+                        if stock.created_at < transaction.created_at:
+                            if transactionItem.type.name=="PURCHASE":
+                                stock.current_stock = stock.current_stock - transactionItem.base_weight
+                            else:
+                                stock.current_stock = stock.current_stock + transactionItem.base_weight
+                            if item_type=="PURCHASE":
+                                stock.current_stock = stock.current_stock + item.get("baseweight")
+                            else:
+                                stock.current_stock = stock.current_stock - item.get("baseweight")
                 else:
                     prevstock = db.query(models.Stock).filter_by(item_id=transactionItem.item_id).first()
                     if prevstock:
-                        if transactionItem.type.name=="PURCHASE":
-                            prevstock.current_stock = prevstock.current_stock - transactionItem.base_weight
-                        else:
-                            prevstock.current_stock = prevstock.current_stock + transactionItem.base_weight
+                        if prevstock.created_at<transaction.created_at:
+                            if transactionItem.type.name=="PURCHASE":
+                                prevstock.current_stock = prevstock.current_stock - transactionItem.base_weight
+                            else:
+                                prevstock.current_stock = prevstock.current_stock + transactionItem.base_weight
+
                     stock = db.query(models.Stock).filter_by(item_id=item_id).first()
                     if stock:
-                        if item_type=="PURCHASE":
-                            stock.current_stock = stock.current_stock + item.get("baseweight")
-                        else:
-                            stock.current_stock = stock.current_stock - item.get("baseweight")
+                        if stock.created_at<transaction.created_at:
+                            if item_type=="PURCHASE":
+                                stock.current_stock = stock.current_stock + item.get("baseweight")
+                            else:
+                                stock.current_stock = stock.current_stock - item.get("baseweight")
                 db.flush()
 
                 if transactionItem:
@@ -1141,11 +1213,12 @@ def saveEditTransaction(data):
             
                 stock = db.query(models.Stock).filter_by(item_id=item_id).first()
                 if stock:
-                    if item_type=="PURCHASE":
-                        stock.current_stock = stock.current_stock + item.get("baseweight")
-                    else:
-                        stock.current_stock = stock.current_stock - item.get("baseweight")
-                    db.flush()
+                    if stock.created_at<transaction.created_at:
+                        if item_type=="PURCHASE":
+                            stock.current_stock = stock.current_stock + item.get("baseweight")
+                        else:
+                            stock.current_stock = stock.current_stock - item.get("baseweight")
+                        db.flush()
             
 
 
@@ -1201,6 +1274,7 @@ def transaction_correction_sequence(transaction_id=None,entity_id=None,created_a
         sequenceData = db.query(models.Transaction).filter(
             models.Transaction.entity_id==entity_id,
             models.Transaction.created_at>created_at,
+            models.Transaction.delete_bool==False,
         ).order_by(models.Transaction.created_at)
         prev_balance = get_old_balance(entity_id,created_at)
         for seqData in sequenceData:
@@ -1239,22 +1313,66 @@ def deleteTransaction(data):
         return
     try:
         id = data.get("id")
+        transaction = db.query(models.Transaction).filter_by(id=id).first()
         items = db.query(models.TransactionItem).filter_by(transaction_id=id).all()
+        item_id_list = []
         for item in items:
             stock = db.query(models.Stock).filter_by(item_id=item.item_id).first()
             if stock:
-                if item.type.name == "SALE":
-                    stock.current_stock = stock.current_stock + item.base_weight
-                else:
-                    stock.current_stock = stock.current_stock - item.base_weight
-            db.delete(item)
-            db.commit()
-        transaction = db.query(models.Transaction).filter_by(id=id).first()
+                if stock.created_at<transaction.created_at:
+                    if item.type.name == "SALE":
+                        stock.current_stock = stock.current_stock + item.base_weight
+                    else:
+                        stock.current_stock = stock.current_stock - item.base_weight
+            
+            if item.delete_bool==False:
+                time = datetime.now(ZoneInfo("Asia/Kolkata"))
+
+                expiry = (time + timedelta(days=60)).replace(
+                    hour=23,
+                    minute=59,
+                    second=59,
+                    microsecond=999999
+                )
+                # db.delete(item)
+                item.delete_bool = True
+                item.delete_time = time
+
+                item.purge_time = expiry
+
+                item_id_list.append(item.id)
+
+                db.flush()
+
         entity_id = transaction.entity_id
         created_at = transaction.created_at
         if transaction:
-            db.delete(transaction)
-            db.commit()
+            if transaction.delete_bool==False:
+                time = datetime.now(ZoneInfo("Asia/Kolkata"))
+
+                expiry = (time + timedelta(days=60)).replace(
+                    hour=23,
+                    minute=59,
+                    second=59,
+                    microsecond=999999
+                )
+                # db.delete(item)
+                transaction.delete_bool = True
+                transaction.delete_time = time
+
+                transaction.purge_time = expiry
+
+                final_ids = [transaction.id,item_id_list]
+
+                final_ids = json.dumps(final_ids)
+
+                newRecycleBin = models.RecycleBin(
+                    table_type = "Transaction",
+                    delete_ids = final_ids
+                )
+                db.add(newRecycleBin)
+                db.commit()
+                db.refresh(newRecycleBin)
         transaction_correction_sequence(transaction_id=None,entity_id=entity_id,created_at=created_at,old_balance_backup=data.get("old_balance"))
         refresh_oldbalance(entity_id)
         socketio.emit("deleteTransactionOk",{})
@@ -1264,6 +1382,7 @@ def deleteTransaction(data):
         socketio.emit("error",{"message":"Error At Delete Transaction!!"})
     finally:
         db.close()
+
 
 @socketio.on("addItemsForEntitiesSequence")
 def addItemsForEntitiesSequence(data):
@@ -1286,7 +1405,7 @@ def addItemsForEntitiesSequence(data):
         ruleClass = db.query(models.Rule).filter_by(entity_id=data.get("entity_id")).order_by(models.Rule.created_at.desc()).distinct().limit(10).all()
         itemData = []
         for rule in ruleClass:
-            item = db.query(models.Item).filter_by(id=rule.item_id).first()
+            item = db.query(models.Item).filter_by(id=rule.item_id).filter_by(delete_bool=False).first()
             itemData.append({
                 "item_name": item.name,
                 "profit_percent": rule.profit_percent,
@@ -1377,10 +1496,10 @@ def getStock(data):
         emit("error", {"msg": "invalid token"})
         return
     try:
-        stockClass = db.query(models.Stock).all()
+        stockClass = db.query(models.Stock).filter_by(delete_bool=False).all()
         itemData = []
         for stock in stockClass:
-            item = db.query(models.Item).filter_by(id=stock.item_id).first()
+            item = db.query(models.Item).filter_by(id=stock.item_id).filter_by(delete_bool=False).first()
             itemData.append({
                 "id": stock.id,
                 "name": item.name,
@@ -1431,11 +1550,12 @@ def saveStock(data=None):
             models.Item.name == name,
             models.Item.touch == touch,
         ).first()
+        time = datetime.now(ZoneInfo("Asia/Kolkata"))
         if item==None:
             newItem = models.Item(
                 name = name,
                 touch = touch,
-                created_at=datetime.now(ZoneInfo("Asia/Kolkata")),
+                created_at=time,
                 created_by=current_user_id
             )
             db.add(newItem)
@@ -1453,6 +1573,7 @@ def saveStock(data=None):
         newStock = models.Stock(
             item_id = item.id,
             current_stock = data.get("current_stock"),
+            created_at = time,
         )
         db.add(newStock)
         db.commit()
@@ -1555,8 +1676,28 @@ def deleteStock(data):
     try:
         stock = db.query(models.Stock).filter_by(id=data.get("id")).first()
         if stock:
-            db.delete(stock)
-            db.commit()
+            if stock.delete_bool==False:
+                time = datetime.now(ZoneInfo("Asia/Kolkata"))
+
+                expiry = (time + timedelta(days=60)).replace(
+                    hour=23,
+                    minute=59,
+                    second=59,
+                    microsecond=999999
+                )
+                # db.delete(stock)
+                stock.delete_bool = True
+                stock.delete_time = time
+
+                stock.purge_time = expiry
+
+                newRecycleBin = models.RecycleBin(
+                    table_type = "Stock",
+                    delete_ids = str(stock.id)
+                )
+                db.add(newRecycleBin)
+                db.commit()
+                db.refresh(newRecycleBin)
         socketio.emit("deleteStockOk",{})
     except Exception as e:
         db.rollback()
@@ -1584,11 +1725,11 @@ def getTransactionsForEntity(data):
         emit("error", {"msg": "invalid token"})
         return
     try:
-        transactions = (db.query(models.Transaction).filter_by(entity_id=data.get("entity_id")).order_by(models.Transaction.created_at.desc()).limit(15).all())
+        transactions = (db.query(models.Transaction).filter_by(entity_id=data.get("entity_id")).filter_by(delete_bool=False).order_by(models.Transaction.created_at.desc()).limit(15).all())
         transactions = sorted(transactions,key=lambda x: x.created_at)
         finalData = []
         for transaction in transactions:
-            transaction_items = (db.query(models.TransactionItem).filter_by(transaction_id=transaction.id).all())
+            transaction_items = (db.query(models.TransactionItem).filter_by(transaction_id=transaction.id).filter_by(delete_bool=False).all())
             for item in transaction_items:
                 itemData = (
                     db.query(models.Item)
@@ -1783,6 +1924,185 @@ def deleteRule(data):
         socketio.emit("error",{"message":"Error At Clear Balance!!"})
     finally:
         db.close()
+
+@socketio.on("getCashReport")
+def getCashReport(data):
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    db = SessionLocal()
+    try:
+        decoded = decode_token(token)
+        current_user = decoded["sub"]
+        user = db.query(models.Users).filter_by(username=current_user).first()
+        current_user_id = user.id
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    try:
+        cash_ob = db.query(models.Settings).filter_by(key="Cash Opening Balance").first()
+        rtgs_ob = db.query(models.Settings).filter_by(key="Rtgs Opening Balance").first()
+        
+        cash_id = db.query(models.Item).filter_by(name="Cash Gold").first().id
+        rtgs_id = db.query(models.Item).filter_by(name="Rtgs Gold").first().id
+        
+        cash_items = db.query(models.TransactionItem).filter(
+            models.TransactionItem.item_id != rtgs_id,
+            models.TransactionItem.delete_bool == False,
+        ).all()
+
+        cash_total = 0
+        d = {}
+        prev = None
+        for item in cash_items:
+            date = ""
+            if prev!=item.transaction_id:
+                date = db.query(models.Transaction).filter_by(id=item.transaction_id).first().created_at.date()
+                date = str(date)
+            prev = item.transaction_id
+            if date not in d:
+                d[date] = [item.id]
+            else:
+                d[date].append(item.id)
+            if item.type.name=="SALE":
+                cash_total += item.cash
+            else:
+                cash_total -= item.cash
+        cash_list = []
+
+        for key,value in d.items():
+            date_dict = {}
+            date_dict["date"] = key
+            temp_list = []
+            date_dict["closing_balance"] = 0
+            for i in range(len(value)):
+                item = db.query(models.TransactionItem).filter_by(id=value[i]).first()
+                if item.cash==0:
+                    continue
+                transaction = db.query(models.Transaction).filter_by(id = item.transaction_id).first()
+                entity_name = db.query(models.Entities).filter_by(id=transaction.entity_id).first().name
+                temp_list.append({
+                    "entity_name": entity_name,
+                    "type": item.type.name,
+
+                    "cash": item.cash,
+
+                    "created_at": str(transaction.created_at)
+                })
+                if item.type.name=="SALE":
+                    date_dict["closing_balance"] += item.cash
+                else:
+                    date_dict["closing_balance"] -= item.cash
+            date_dict["transactions"] = temp_list
+            cash_list.append(date_dict)
+            
+            
+        rtgs_items = db.query(models.TransactionItem).filter(
+            models.TransactionItem.item_id == rtgs_id,
+            models.TransactionItem.delete_bool == False
+        ).all()
+
+        rtgs_total = 0
+        d = {}
+        prev = None
+        for item in rtgs_items:
+            date = ""
+            if prev!=item.transaction_id:
+                date = db.query(models.Transaction).filter_by(id=item.transaction_id).first().created_at.date()
+                date = str(date)
+            prev = item.transaction_id
+            if date not in d:
+                d[date] = [item.id]
+            else:
+                d[date].append(item.id)
+            if item.type.name=="SALE":
+                rtgs_total += item.cash
+            else:
+                rtgs_total -= item.cash
+
+        rtgs_list = []
+
+        for key,value in d.items():
+            date_dict = {}
+            date_dict["date"] = key
+            temp_list = []
+            date_dict["closing_balance"] = 0
+            for i in range(len(value)):
+                item = db.query(models.TransactionItem).filter_by(id=value[i]).first()
+                transaction = db.query(models.Transaction).filter_by(id = item.transaction_id).first()
+                entity_name = db.query(models.Entities).filter_by(id=transaction.entity_id).first().name
+                temp_list.append({
+                    "entity_name": entity_name,
+                    "type": item.type.name,
+
+                    "cash": item.cash,
+
+                    "created_at": str(transaction.created_at)
+                })
+                if item.type.name=="SALE":
+                    date_dict["closing_balance"] += item.cash
+                else:
+                    date_dict["closing_balance"] -= item.cash
+            date_dict["transactions"] = temp_list
+            rtgs_list.append(date_dict)
+
+        final_data = {
+            "cash_balance": cash_total+float(cash_ob.value),
+            "rtgs_balance": rtgs_total+float(rtgs_ob.value),
+            "cash_days": cash_list,
+            "rtgs_days": rtgs_list
+        }
+
+        socketio.emit("cashReport",final_data)
+
+    except Exception as e:
+        db.rollback()
+        print("Error:",e)
+        socketio.emit("error",{"message":"Error At Get Cash Report!!"})
+    finally:
+        db.close()
+    
+@socketio.on("getGoldReport")
+def getGoldReport(data):
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    db = SessionLocal()
+    try:
+        decoded = decode_token(token)
+        current_user = decoded["sub"]
+        user = db.query(models.Users).filter_by(username=current_user).first()
+        current_user_id = user.id
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    try:
+        entities = db.query(models.Entities).filter_by(delete_bool=False).all()
+        l = []
+        for entity in entities:
+            if entity.name=="Cash Helper":
+                continue
+            l.append({"name":entity.name,"balance":entity.balance})
+        
+        stocks = db.query(models.Stock).filter_by(delete_bool=False).all()
+        for stock in stocks:
+            item = db.query(models.Item).filter_by(id=stock.item_id).first()
+            l.append({"name":item.name+" "+str(item.touch),"balance":stock.current_stock*item.touch/100})
+        socketio.emit("goldReport",{"items":l})
+
+    except Exception as e:
+        db.rollback()
+        print("Error:",e)
+        socketio.emit("error",{"message":"Error At Get Cash Report!!"})
+    finally:
+        db.close()
+
 
 if __name__=="__main__":
     socketio.run(app,debug=True,port=5000)

@@ -69,6 +69,22 @@ const modules = {
             { id: "editStockBtn", label: "Edit Stock", action: "editStock()" },
             { id: "deleteStockBtn", label: "Delete Stock", action: "deleteStock()" }
         ]
+    },
+
+    cash: {
+        top: [
+            { id: "addCashBtn", label: "All Cash", action: "" }
+        ],
+        left: [
+            { id: "addBtn", label: "+ Add Cash", action: "addCash()" },
+            { id: "editCashBtn", label: "Edit Cash", action: "editCash()" },
+            { id: "deleteCashBtn", label: "Delete Cash", action: "deleteCash()" }
+        ]
+    },
+
+    report: {
+        top: [],
+        left: []
     }
 
 };
@@ -99,6 +115,14 @@ function openModule(type) {
 
     if (type === "stock") {
         getStock();
+    }
+
+    if (type === "cash") {
+        getCash();
+    }
+
+    if (type === "report") {
+        getReport();
     }
 }
 
