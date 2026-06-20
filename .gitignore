@@ -1,2 +1,4 @@
-env/.gitautocount
+env/
 .gitautocount
+.gitautocount
+__pycache__/

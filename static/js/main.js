@@ -102,6 +102,8 @@ function openModule(type) {
     renderLeft(type);
 
     if (type === "entry") {
+        const searchElement = document.getElementById("searchInput");
+        searchElement.id = "newSearchElement";
         getTransaction();
     }
 
@@ -129,6 +131,7 @@ function openModule(type) {
 function home() {
     document.getElementById("homePage").classList.remove("hidden");
     document.getElementById("appPage").classList.add("hidden");
+    current_name = "";
 }
 
 function renderTop(module) {
@@ -153,33 +156,46 @@ function renderTop(module) {
     });
 
     // search always present
+    const div = document.createElement("div");
+    div.className = "input-wrapper";
     const search = document.createElement("input");
     search.id = "searchInput";
     search.placeholder = "Search...";
-    search.value = current_name;
+    search.value;
     search.setAttribute("autocomplete", "off");
 
-    
-    search.addEventListener("input", function(){
-        searchbar();
-    });
+    if(currentModule!="entry"){
+        search.addEventListener("input", function(){
+            searchbar();
+        });
 
-    // ✅ attach event HERE (correct place)
-    search.addEventListener("keyup", function(e){
-        if (e.key == "Enter") {
-            current_name = search.value;
+        // ✅ attach event HERE (correct place)
+        search.addEventListener("keyup", function(e){
+            if (e.key == "Enter") {
+                current_name = search.value;
 
-            const addBtn = document.getElementById("addBtn");
-            if (addBtn) addBtn.focus();
-        }
-    });
-    top.appendChild(search);
+                const addBtn = document.getElementById("addBtn");
+                if (addBtn) addBtn.focus();
+            }
+        });
+    }
+    div.appendChild(search);
+    if(currentModule==="entry"){
+        const dropdown = document.createElement("div");
+        dropdown.id = "newSearchElementDropdown";
+        dropdown.className = "dropdown";
+        div.appendChild(dropdown);
+    }
+    top.appendChild(div);
 }
 
 let searchTimeout;
 function searchbar(){
     clearTimeout(searchTimeout);
     let search = document.getElementById("searchInput");
+    if(currentModule==="entry"){
+        search = document.getElementById("newSearchElement");
+    }
 
     searchTimeout = setTimeout(() => {
         current_name = search.value;
@@ -196,6 +212,13 @@ function searchbar(){
                 token: localStorage.getItem("token"),
                 value: current_name,
                 type: current_mode
+            });
+        }
+
+        if (currentModule === "entry") {
+            socket.emit("searchEntry", {
+                token: localStorage.getItem("token"),
+                value: current_name,
             });
         }
 

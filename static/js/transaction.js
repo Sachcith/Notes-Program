@@ -3,9 +3,17 @@ function getTransaction(){
     selectedPage = null;
     const grid = document.getElementById("grid");
     grid.innerHTML = "";
-    socket.emit("getTransaction",{token: localStorage.getItem("token")});
-    // searchbar();
+    setupAutocomplete("newSearchElement","transactionEntityName",(input,item,type)=>{
+        input.value = item[type];
+        current_mode = item["type"];
+        set_current_mode();
+        searchbar();
+    });
+    // socket.emit("getTransaction",{token: localStorage.getItem("token")});
+    searchbar();
 }
+
+
 
 /* SOCKET FOR RENDERING TRANSACTION */
 socket.on("transactionData",(e)=>{
@@ -167,7 +175,7 @@ function addTransaction() {
 
     changeCashModeBtn.addEventListener("click",()=>{
         if(cashMode == "cash"){
-            cashMode = "rgts";
+            cashMode = "rtgs";
             changeCashModeBtn.innerHTML = "Rtgs Cash";
         }
         else{
@@ -177,6 +185,13 @@ function addTransaction() {
         currentDiv = goldRateCash(goldRate,cash,currentDiv);
     });
 }
+
+socket.on("errorTransaction",(data)=>{
+    if(data.type=="name"){
+        const ok = confirm("Name is incorrect");
+        document.getElementById("name").focus();
+    }
+});
 
 let cashMode = "cash";
 
@@ -821,7 +836,7 @@ socket.on("triggerEditTransactionSequenceFromServer",(data)=>{
 
     changeCashModeBtn.addEventListener("click",()=>{
         if(cashMode == "cash"){
-            cashMode = "rgts";
+            cashMode = "rtgs";
             changeCashModeBtn.innerHTML = "Rtgs Cash";
         }
         else{

@@ -107,7 +107,6 @@ def getEntity(data=None):
         decoded = decode_token(token)
         username = decoded["sub"]
     except Exception as e:
-        db.rollback()
         print("Error",e)
         emit("error", {"msg": "invalid token"})
         return
@@ -327,7 +326,6 @@ def search_entity_name(data):
         decoded = decode_token(token)
         username = decoded["sub"]
     except Exception as e:
-        db.rollback()
         print("Error",e)
         emit("error", {"msg": "invalid token"})
         return
@@ -366,7 +364,6 @@ def search_entity_location(data):
         decoded = decode_token(token)
         username = decoded["sub"]
     except Exception as e:
-        db.rollback()
         print("Error",e)
         emit("error", {"msg": "invalid token"})
         return
@@ -403,18 +400,18 @@ def search_transaction_entity_name(data):
         decoded = decode_token(token)
         username = decoded["sub"]
     except Exception as e:
-        db.rollback()
         print("Error",e)
         emit("error", {"msg": "invalid token"})
         return
     db = SessionLocal()
     try:
-        entityClass = db.query(models.Entities).filter(models.Entities.name.ilike(f"%{data.get("value")}%")).distinct().limit(10).all()
+        entityClass = db.query(models.Entities).filter(models.Entities.name.ilike(f"%{data.get("value")}%")).filter_by(delete_bool=False).distinct().limit(10).all()
         entityData = []
         for entity in entityClass:
             entityData.append({
                 "transactionEntityName":entity.name,
                 "old_balance": get_old_balance(entity.id,data.get("created_at",None)),
+                "type": entity.type.name.lower(),
             })
         emit("TransactionEntityNameResults",entityData)
 
@@ -440,7 +437,6 @@ def search_item_name(data):
         decoded = decode_token(token)
         username = decoded["sub"]
     except Exception as e:
-        db.rollback()
         print("Error",e)
         emit("error", {"msg": "invalid token"})
         return
@@ -681,6 +677,63 @@ def search_item(data):
     finally:
         db.close()
 
+@socketio.on("searchEntry")
+def searchEntry(data):
+    if not data:
+        emit("error", {"msg": "no data received"})
+        return
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    token = str(token)
+    try:
+        decoded = decode_token(token)
+        username = decoded["sub"]
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    db = SessionLocal()
+    try:
+        entity_id = db.query(models.Entities).filter_by(name=data.get("value")).first()
+        if entity_id:
+            entity_id = entity_id.id
+        else:
+            return
+        transactions = db.query(models.Transaction).filter_by(delete_bool=False).filter_by(entity_id=entity_id).order_by(models.Transaction.created_at.desc()).all()
+        transactionData = []
+        for bill in transactions:
+            entity_id = bill.entity_id
+            entity = db.query(models.Entities).filter_by(id=entity_id).first()
+            if entity.delete_bool:
+                continue
+            entity_name = entity.name
+            entity_location = entity.location
+            entity_type = entity.type
+            transactionData.append({
+                "id": bill.id,
+                "name": entity_name,
+                "old_balance": bill.old_balance,
+                "new_balance": bill.new_balance,
+                "base_weight": bill.base_weight,
+                "final_weight": bill.final_weight,
+                "created_at": str(bill.created_at),
+                "updated_at": str(bill.updated_at),
+                "created_by": bill.created_by,
+                "location": entity_location,
+                "type": entity_type.name,
+            })
+        emit("transactionData",transactionData)
+    except Exception as e:
+        db.rollback()
+        print("Error: ",e)
+        emit("error",{"message":"Search Transaction Error!!"})
+    finally:
+        db.close()
+
+
 @socketio.on("getTransaction")
 def getTransaction(data=None):
     if not data:
@@ -750,7 +803,12 @@ def saveTransaction(data):
         emit("error", {"msg": "invalid token"})
         return
     try:
-        entity_id = db.query(models.Entities).filter_by(name=data.get("name")).first().id
+        entity_id = db.query(models.Entities).filter_by(name=data.get("name")).first()
+        if entity_id:
+            entity_id = entity_id.id
+        else:
+            emit("errorTransaction",{"type":"name"})
+            return
         time = datetime.now(ZoneInfo("Asia/Kolkata"))
         newTransaction = models.Transaction(
             entity_id = entity_id,
@@ -765,10 +823,10 @@ def saveTransaction(data):
             created_by=current_user_id,
         )
         db.add(newTransaction)
-        db.commit()
+        db.flush()
         db.refresh(newTransaction)
 
-        refresh_oldbalance(entity_id,data.get("new_balance",None))
+        refresh_oldbalance(db,entity_id,data.get("new_balance",None))
 
         items = data.get("items")
         transaction_id = db.query(models.Transaction).filter_by(created_at=time).first().id
@@ -803,7 +861,7 @@ def saveTransaction(data):
                     created_by = current_user_id,
                 )
                 db.add(newTransactionItem)
-                db.commit()
+                db.flush()
                 db.refresh(newTransactionItem)
             else:
                 newTransactionItem = models.TransactionItem(
@@ -821,7 +879,7 @@ def saveTransaction(data):
                     created_by = current_user_id,
                 )
                 db.add(newTransactionItem)
-                db.commit()
+                db.flush()
                 db.refresh(newTransactionItem)
 
 
@@ -839,7 +897,7 @@ def saveTransaction(data):
                     created_by = current_user_id
                 )
                 db.add(newRule)
-                db.commit()
+                db.flush()
                 db.refresh(newRule)
             
             stock = db.query(models.Stock).filter_by(item_id=item_id).first()
@@ -848,7 +906,7 @@ def saveTransaction(data):
                     stock.current_stock = stock.current_stock + item.get("baseweight")
                 else:
                     stock.current_stock = stock.current_stock - item.get("baseweight")
-                db.commit()
+                db.flush()
 
 
         new_balance_function, flag = calculate_new_balance(data.get("old_balance"),data.get("items"))
@@ -857,7 +915,8 @@ def saveTransaction(data):
             socketio.emit("error",{"message":"Error in the Total compared from front-end and back-end!!"})
             socketio.emit("openEditTransaction",transaction_id)
             #### Under Construction in saveTransaction too
-        refresh_oldbalance(entity_id,data.get("new_balance"))
+        refresh_oldbalance(db,entity_id,data.get("new_balance"))
+        db.commit()
         socketio.emit("saveTransactionOk",{})
     
     except Exception as e:
@@ -868,15 +927,14 @@ def saveTransaction(data):
         db.close()
 
 
-def refresh_oldbalance(id,balance=None):
+def refresh_oldbalance(db,id,balance=None):
     try:
-        db = SessionLocal()
         latest_data = db.query(models.Transaction).filter_by(entity_id=id).filter_by(delete_bool=False).first()
         if latest_data==None:
             entity = db.query(models.Entities).filter_by(id=id).first()
             entity.balance = entity.opening_balance
             entity.updated_at = datetime.now(ZoneInfo("Asia/Kolkata"))
-            db.commit()
+            db.flush()
             return
         if balance==None:
             latest_data = db.query(models.Transaction).filter_by(entity_id=id).filter_by(delete_bool=False).order_by(models.Transaction.created_at.desc()).first()
@@ -886,7 +944,7 @@ def refresh_oldbalance(id,balance=None):
             if entity:
                 entity.balance = updated_balance
                 entity.updated_at = update_time
-            db.commit()
+            db.flush()
         else:
             updated_balance = balance
             update_time = datetime.now(ZoneInfo("Asia/Kolkata"))
@@ -894,31 +952,42 @@ def refresh_oldbalance(id,balance=None):
             if entity:
                 entity.balance = updated_balance
                 entity.updated_at = update_time
-            db.commit()
+            db.flush()
 
     except Exception as e:
-        db.rollback()
+        # db.rollback()
         print("Refresh OldBalance Error")
         print("Error:",e)
     finally:
-        db.close()
+        pass
+        # db.close()
 
 def get_old_balance(entity_id,created_at=None):
-    db = SessionLocal()
-    entity = db.query(models.Entities).filter_by(id=entity_id).first()
-    if created_at==None:
-        previous_transaction = db.query(models.Transaction).filter_by(entity_id=entity_id).filter_by(delete_bool=False).first()
-        if previous_transaction!=None:
-            return entity.balance
-        return entity.opening_balance
-    previous_transaction = db.query(models.Transaction).filter(
-        models.Transaction.entity_id==entity.id,
-        models.Transaction.created_at < created_at,
-        models.Transaction.delete_bool==False,
-    ).order_by(models.Transaction.created_at.desc()).first()
-    if previous_transaction==None:
-        return entity.opening_balance
-    return previous_transaction.new_balance
+    try:
+        db = SessionLocal()
+        entity = db.query(models.Entities).filter_by(id=entity_id).first()
+        if created_at==None:
+            previous_transaction = db.query(models.Transaction).filter_by(entity_id=entity_id).filter_by(delete_bool=False).first()
+            if previous_transaction!=None:
+                return entity.balance
+            return entity.opening_balance
+        previous_transaction = db.query(models.Transaction).filter(
+            models.Transaction.entity_id==entity.id,
+            models.Transaction.created_at < created_at,
+            models.Transaction.delete_bool==False,
+        ).order_by(models.Transaction.created_at.desc()).first()
+        if previous_transaction==None:
+            return entity.opening_balance
+        return previous_transaction.new_balance
+    except Exception as e:
+        db.rollback()
+        print("Error: ",e)
+        import traceback
+        traceback.print_exc()
+        emit("error",{"message":"Get Old Balance Error!!"})
+    finally:
+        db.close()
+
 
 # {'itemname': 'Casting Rings', 'baseweight': 100,
 #  'touch': 92, 'seal': 'Narendran', 'profit': 0, 
@@ -1249,8 +1318,8 @@ def saveEditTransaction(data):
         backup_entity_id = db.query(models.Entities).filter_by(name=data.get("backup_name")).first().id
         transaction_correction_sequence(transaction_id=transaction_id,entity_id=None,created_at=transaction.created_at)
         transaction_correction_sequence(transaction_id=None,entity_id=backup_entity_id,created_at=transaction.created_at,old_balance_backup=data.get("old_balance_backup"))
-        refresh_oldbalance(entity_id)
-        refresh_oldbalance(backup_entity_id)
+        refresh_oldbalance(db,entity_id)
+        refresh_oldbalance(db,backup_entity_id)
         db.commit()
         socketio.emit("saveEditTransactionOk",{})
     
@@ -1282,6 +1351,7 @@ def transaction_correction_sequence(transaction_id=None,entity_id=None,created_a
             seqData.old_balance = prev_balance
             seqData.new_balance = seqData.new_balance - temp_balance + prev_balance
             prev_balance = seqData.new_balance
+            db.flush()
         db.commit()
     
     except Exception as e:
@@ -1371,10 +1441,11 @@ def deleteTransaction(data):
                     delete_ids = final_ids
                 )
                 db.add(newRecycleBin)
-                db.commit()
+                db.flush()
                 db.refresh(newRecycleBin)
         transaction_correction_sequence(transaction_id=None,entity_id=entity_id,created_at=created_at,old_balance_backup=data.get("old_balance"))
-        refresh_oldbalance(entity_id)
+        refresh_oldbalance(db,entity_id)
+        db.commit()
         socketio.emit("deleteTransactionOk",{})
     except Exception as e:
         db.rollback()
@@ -1456,7 +1527,7 @@ def saveItemRule(data):
         if rule:
             rule.profit_percent = profit
             rule.wastage_percent = wastage
-            db.commit()
+            db.flush()
         else:
             time = datetime.now(ZoneInfo("Asia/Kolkata"))
             newRule = models.Rule(
@@ -1469,7 +1540,8 @@ def saveItemRule(data):
                 created_by = current_user_id,
             )
             db.add(newRule)
-            db.commit()
+            db.flush()
+        db.commit()
     except Exception as e:
         db.rollback()
         print("Error:",e)
@@ -1559,7 +1631,7 @@ def saveStock(data=None):
                 created_by=current_user_id
             )
             db.add(newItem)
-            db.commit()
+            db.flush()
             db.refresh(newItem)
             item = db.query(models.Item).filter(
                 models.Item.name == name,
@@ -1614,7 +1686,7 @@ def saveStockEdit(data=None):
         # print(type(item.touch),type(touch))
         if item.name == name and item.touch==touch:
             stock.current_stock = current_stock
-            db.commit()
+            db.flush()
             socketio.emit("editStockOk",{})
             return
         checkItem = db.query(models.Item).filter(
@@ -1628,7 +1700,7 @@ def saveStockEdit(data=None):
                 return
             stock.item_id = checkItem.id
             stock.current_stock = current_stock
-            db.commit()
+            db.flush()
         else:
             newItem = models.Item(
                 name = name,
@@ -1637,7 +1709,7 @@ def saveStockEdit(data=None):
                 created_by=current_user_id
             )
             db.add(newItem)
-            db.commit()
+            db.flush()
             db.refresh(newItem)
             item = db.query(models.Item).filter(
                 models.Item.name == name,
@@ -1832,10 +1904,10 @@ def clearBalance(data):
             created_by=current_user_id,
         )
         db.add(newTransaction)
-        db.commit()
+        db.flush()
         db.refresh(newTransaction)
 
-        refresh_oldbalance(entity_id,data.get("new_balance",None))
+        refresh_oldbalance(db,entity_id,data.get("new_balance",None))
 
         items = [{'itemname': nil_name, 'baseweight': nil_balance, 
                   'touch': 100, 'seal': '', 'profit': 0, 'wastage': 0,
@@ -1874,8 +1946,9 @@ def clearBalance(data):
                 created_by = current_user_id,
             )
             db.add(newTransactionItem)
-            db.commit()
+            db.flush()
             db.refresh(newTransactionItem)
+        db.commit()
         socketio.emit("clearBalanceOk",{})
         
     except Exception as e:
