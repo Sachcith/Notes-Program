@@ -123,7 +123,7 @@ function editEntity() {
             <br><br>
 
             <label>Balance</label>
-            <input id="balance" type="number" value="${d.balance.toFixed(3)}">
+            <input id="balance" type="number" value="${d.opening_balance.toFixed(3)}">
             
             <label>Phone</label>
             <input id="phone" placeholder="Enter phone" value="${d.phone}">
@@ -837,6 +837,11 @@ RENDER TRANSACTIONS
 
 function renderTransactions(data){
 
+    let runningBalance =
+    Number(
+        selectedPage.d.opening_balance || 0
+    );
+
     const pendingContainer =
         document.getElementById(
             "pendingTransactionsContainer"
@@ -868,11 +873,21 @@ function renderTransactions(data){
     let lastPendingDate = "";
     let lastSentDate = "";
 
-    data.forEach(transaction => {
+    data.forEach((transaction,index) => {
 
         /* =================================
         PENDING PHOTO
         ================================= */
+        const delta =
+            transaction.type === "PURCHASE"
+            ? -Number(
+                transaction.final_pure || 0
+            )
+            : Number(
+                transaction.final_pure || 0
+            );
+
+        runningBalance += delta;
 
         if(
             transaction.photo_sent === "NOT_SENT"
@@ -911,7 +926,58 @@ function renderTransactions(data){
             lastSentDate =
                 transaction.date;
         }
+        
+        const nextTransaction =
+            data[index + 1];
+
+        const isLastTransactionOfDay =
+            !nextTransaction ||
+            nextTransaction.date !==
+            transaction.date;
+
+        if(isLastTransactionOfDay){
+
+            addClosingBalanceRow(
+                transaction.photo_sent ===
+                "NOT_SENT"
+                    ? "pendingTransactionsContainer"
+                    : "sentTransactionsContainer",
+
+                runningBalance
+            );
+        }
     });
+}
+
+function addClosingBalanceRow(
+    containerId,
+    balance
+){
+
+    const container =
+        document.getElementById(
+            containerId
+        );
+
+    const row =
+        document.createElement("div");
+
+    row.className =
+        "closing-balance-row";
+
+    row.innerHTML = `
+
+        <div>
+            Closing Balance
+        </div>
+
+        <div>
+            ${balance.toFixed(3)} g
+        </div>
+
+    `;
+
+    container.appendChild(row);
 }
 
 function loadTransactions(){

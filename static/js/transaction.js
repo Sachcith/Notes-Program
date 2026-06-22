@@ -191,6 +191,20 @@ socket.on("errorTransaction",(data)=>{
         const ok = confirm("Name is incorrect");
         document.getElementById("name").focus();
     }
+    if(data.type=="item"){
+        const ok = confirm("Item Name is incorrect");
+        const rows = document.querySelectorAll(".item-row");
+        for(const row of rows){
+            const inputs = row.querySelectorAll("input");
+            if(inputs[0].value==data.value){
+                inputs[0].focus();
+                break;
+            }
+        }
+    }
+    if(data.type=="nill"){
+        const ok = confirm("Cannot Edit Nill Correction, Only Deleting is possible");
+    }
 });
 
 let cashMode = "cash";
@@ -288,7 +302,8 @@ socket.on("saveTransactionOk",(e)=>{
     console.log("New Transaction Saved Successfully");
     unlock = true;
     itemRowCounter = 0;
-    getTransaction();
+    if(e.name!="Cash Helper") getTransaction();
+    else showCash();
 });
 
 let itemRowCounter = 0;
@@ -642,7 +657,6 @@ function calculate_final_value(inputs){
 }
 
 function calculate_global_final_values(rows){
-    console.log("global");
     let total_base = parseFloat(0);
     let total_qty = parseFloat(0);
     let total_final = parseFloat(0);
@@ -936,12 +950,14 @@ function saveEditTransaction(){
 
 socket.on("saveEditTransactionOk",(e)=>{
     console.log("Saved Changes Successfully!!");
-    getTransaction();
+    if(e.name!="Cash Helper") getTransaction();
+    else showCash();
 });
 
 function deleteTransaction(){
-    if (!selectedPage || !selectedPage.el) {
+    if (selectedPage == null || !selectedPage || !selectedPage.el) {
         console.error("selectedPage not set");
+        confirm("Please select a page for Deleting");
         return;
     }
 
@@ -957,5 +973,6 @@ function deleteTransaction(){
 
 socket.on("deleteTransactionOk",(e)=>{
     console.log("Transaction Deleted Successfully");
-    getTransaction();
+    if(e.name!="Cash Helper") getTransaction();
+    else showCash();
 });

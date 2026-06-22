@@ -77,8 +77,10 @@ const modules = {
         ],
         left: [
             { id: "addBtn", label: "+ Add Cash", action: "addCash()" },
+            { id: "getCashBtn", label: "Report", action: "getCash()" },
+            { id: "showCashBtn", label: "Show Cash", action: "showCash()" },
             { id: "editCashBtn", label: "Edit Cash", action: "editCash()" },
-            { id: "deleteCashBtn", label: "Delete Cash", action: "deleteCash()" }
+            { id: "deleteCashBtn", label: "Delete Cash", action: "deleteTransaction()" }
         ]
     },
 

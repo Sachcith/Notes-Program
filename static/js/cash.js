@@ -1,6 +1,7 @@
 let cashReportMode = "cash";
 
 function getCash(){
+    selectedPage = null;
 
     const grid =
         document.getElementById("grid");
@@ -200,8 +201,6 @@ function renderCashReport(){
         ? cashReportData.cash_days
         : cashReportData.rtgs_days;
 
-    console.log(days);
-
     days.forEach((day,index)=>{
 
         const group =
@@ -387,7 +386,7 @@ function addCash() {
                     </button>
 
                     <button class="cancel-btn"
-                            onclick="getCash()">
+                            onclick="showCash()">
                         Cancel
                     </button>
 
@@ -410,18 +409,19 @@ function addCashRow(item = {}) {
     itemRowCounter++;
     const itemId = "item-"+itemRowCounter;
 
+    console.log(item.name);
     div.innerHTML = `
 
-        <input disabled id="${itemId}" placeholder="Item" value="Cash Gold" data-id="${item.id}" autocomplete="off">
+        <input disabled id="${itemId}" placeholder="Item" value="${item.name || "Cash Gold"}" data-id="${item.id}" autocomplete="off">
 
-        <input id="cash" placeholder="Cash" autocomplete="off">
+        <input id="cash" placeholder="Cash" autocomplete="off" value="${item.cash || ""}">
 
         <button class="type-btn ${item.type === "SALE" ? "SALE" : "BUY"}">
             ${item.type === "SALE" ? "SALE" : "BUY"}
         </button>
 
         <button class="type-btn-cash">
-            Cash
+            ${item.name === "Rtgs Gold"? "Rtgs" : "Cash"}
         </button>
 
         <button class="delete-button"> Delete </button>
@@ -509,4 +509,170 @@ function saveCash() {
         gold_rate: 0,
     }
     socket.emit("saveTransaction",data);
+}
+
+
+function showCash(){
+    selectedPage = null;
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    socket.emit("getCash",{token: localStorage.getItem("token")});
+}
+
+socket.on("cashData",(e)=>{
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+
+    e.forEach(d => {
+        const div = document.createElement("div");
+        div.className = "page";
+        div.onclick = () => selectPage(div, d);
+
+        const type_thing = d.type=="PURCHASE"?"Debited":"Credited";
+
+        div.innerHTML = `
+            Cash: ${parseFloat(d.cash.toFixed(3))}<br>
+            Type: ${type_thing}<br>
+            <small>${d.created_at}</small>
+        `;
+
+        grid.appendChild(div);
+    });
+});
+
+/* EDIT CASH */
+function editCash() {
+    if(selectedPage==null){
+        confirm("Please select a page in Show Cash Page");
+    }
+    socket.emit("triggerEditCash",{
+        token: localStorage.getItem("token"),
+        id: selectedPage.d.id,
+    });
+}
+
+
+socket.on("triggerEditCashFromServer",(e)=>{
+
+    const grid = document.getElementById("grid");
+    grid.innerHTML = `
+        <div class="transaction-form">
+
+            <h2>Add Cash</h2>
+
+
+            <label>Name</label>
+                <input id="name" placeholder="Enter name" disabled value="Cash Helper">
+
+            <div class="header-row">
+                <div>Cash</div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+
+            <div id="itemsContainer"></div>
+
+            <button class="add-item-btn" onclick="addCashRow()">
+                + Add Cash
+            </button>
+
+            <div class="bottom-panel">
+
+                <!-- ===================================
+                    SUMMARY ROW
+                ==================================== -->
+                <div class="bottom-summary-row">
+
+                    <div></div>
+                    <div></div>
+
+                    <div></div>
+                    <div></div>
+                    <div></div>
+                    <div></div>
+
+                    <div></div>
+
+                    <div></div>
+
+                    <div></div>
+
+                    <div></div>
+                    <div></div>
+                    <div></div>
+
+                </div>
+
+                <!-- ===================================
+                    ACTION ROW
+                ==================================== -->
+                <div class="bottom-action-row">
+
+                    <button onclick="saveEditCash()">
+                        Save
+                    </button>
+
+                    <button class="cancel-btn"
+                            onclick="showCash()">
+                        Cancel
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+    `;
+    e.items.forEach(item=>{
+        addCashRow(item);
+    });
+});
+
+function saveEditCash(){
+    const name = document.getElementById("name").value;
+
+    const rows = document.querySelectorAll(".item-row");
+
+    let items = [];
+
+    rows.forEach(r => {
+        const inputs = r.querySelectorAll("input");
+        const buttons = r.querySelectorAll("button");
+
+        const item = {
+            id: inputs[0].dataset.id,
+            itemname: inputs[0].value,
+            cash: parseFloat(inputs[1].value || 0),
+            baseweight: 0,
+            touch: 100,
+            seal: "",
+            profit: 0,
+            wastage: 0,
+            stone: 0,
+            qty: 0,
+            finalweight: 0,
+            type: buttons[0].innerText,
+        };
+        items.push(item);
+    });
+
+    const data = {
+        token: localStorage.getItem("token"),
+        id: selectedPage.d.id,
+        name: name,
+        old_balance: 0,
+        new_balance: 0,
+        base_weight: 0,
+        final_weight: 0,
+        items: items,
+        cash: 0,
+        gold_rate: 0,
+        backup_name: name,
+    }
+    socket.emit("saveEditTransaction",data);
 }

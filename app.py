@@ -115,6 +115,8 @@ def getEntity(data=None):
         entityClass = db.query(models.Entities).filter_by(delete_bool=False).all()
         entityData = []
         for entity in entityClass:
+            if entity.name=="Cash Helper":
+                continue
             entityData.append({
                 "id": entity.id,
                 "name": entity.name,
@@ -201,10 +203,10 @@ def saveEntityEdit(data=None):
             entity.name = data.get("name")
             entity.phone = data.get("phone")
             entity.location = data.get("location")
-            entity.balance = data.get("balance")
+            entity.opening_balance = data.get("balance")
             entity.type = models.EntityType[data.get("type").upper()]
             entity.updated_at = datetime.now(ZoneInfo("Asia/Kolkata"))
-
+        transaction_correction_sequence(entity_id=entity.id,created_at=entity.created_at)
         db.commit()
         socketio.emit("editEntityOk",{})
     except Exception as e:
@@ -291,6 +293,8 @@ def search_entity(data):
         ).all()
         entityData = []
         for entity in entityClass:
+            if entity.name=="Cash Helper":
+                continue
             entityData.append({
                 "id": entity.id,
                 "name": entity.name,
@@ -298,6 +302,7 @@ def search_entity(data):
                 "phone": entity.phone,
                 "location": entity.location,
                 "balance": entity.balance,
+                "opening_balance": entity.opening_balance,
                 "created_at": str(entity.created_at),
                 "updated_at": str(entity.updated_at),
                 "created_by": entity.created_by,
@@ -408,6 +413,8 @@ def search_transaction_entity_name(data):
         entityClass = db.query(models.Entities).filter(models.Entities.name.ilike(f"%{data.get("value")}%")).filter_by(delete_bool=False).distinct().limit(10).all()
         entityData = []
         for entity in entityClass:
+            if entity.name=="Cash Helper":
+                continue
             entityData.append({
                 "transactionEntityName":entity.name,
                 "old_balance": get_old_balance(entity.id,data.get("created_at",None)),
@@ -809,6 +816,18 @@ def saveTransaction(data):
         else:
             emit("errorTransaction",{"type":"name"})
             return
+        items = data.get("items")
+        for item in items:
+            item_id = db.query(models.Item).filter(
+                models.Item.name==item.get("itemname"),
+                models.Item.touch==item.get("touch")
+            ).first()
+            if item_id:
+                pass
+            else:
+                emit("errorTransaction",{"type":"item","value":item.get("itemname")})
+                return
+        
         time = datetime.now(ZoneInfo("Asia/Kolkata"))
         newTransaction = models.Transaction(
             entity_id = entity_id,
@@ -828,7 +847,6 @@ def saveTransaction(data):
 
         refresh_oldbalance(db,entity_id,data.get("new_balance",None))
 
-        items = data.get("items")
         transaction_id = db.query(models.Transaction).filter_by(created_at=time).first().id
         print(items)
         
@@ -917,7 +935,7 @@ def saveTransaction(data):
             #### Under Construction in saveTransaction too
         refresh_oldbalance(db,entity_id,data.get("new_balance"))
         db.commit()
-        socketio.emit("saveTransactionOk",{})
+        socketio.emit("saveTransactionOk",{"name":data.get("name")})
     
     except Exception as e:
         db.rollback()
@@ -1079,6 +1097,9 @@ def trigerEditTransactionSequence(data):
         items_data = []
         for item in items:
             item_name = db.query(models.Item).filter_by(id=item.item_id).first().name
+            if item_name=="Nil Correction":
+                emit("errorTransaction",{"type":"nill"})
+                return
             seal_name = db.query(models.Entities).filter_by(id=item.seal).first()
             if seal_name:
                 seal_name = seal_name.name
@@ -1144,6 +1165,23 @@ def saveEditTransaction(data):
         emit("error", {"msg": "invalid token"})
         return
     try:
+        entity_id = db.query(models.Entities).filter_by(name=data.get("name")).first()
+        if entity_id:
+            entity_id = entity_id.id
+        else:
+            emit("errorTransaction",{"type":"name"})
+            return
+        items = data.get("items")
+        for item in items:
+            item_id = db.query(models.Item).filter(
+                models.Item.name==item.get("itemname"),
+                models.Item.touch==item.get("touch")
+            ).first()
+            if item_id:
+                pass
+            else:
+                emit("errorTransaction",{"type":"item","value":item.get("itemname")})
+                return
         transaction_id = data.get("id")
         transaction = db.query(models.Transaction).filter_by(id=transaction_id).first()
         entity_id = db.query(models.Entities).filter_by(name=data.get("name")).first().id
@@ -1321,7 +1359,7 @@ def saveEditTransaction(data):
         refresh_oldbalance(db,entity_id)
         refresh_oldbalance(db,backup_entity_id)
         db.commit()
-        socketio.emit("saveEditTransactionOk",{})
+        socketio.emit("saveEditTransactionOk",{"name":data.get("name")})
     
     except Exception as e:
         db.rollback()
@@ -1446,7 +1484,11 @@ def deleteTransaction(data):
         transaction_correction_sequence(transaction_id=None,entity_id=entity_id,created_at=created_at,old_balance_backup=data.get("old_balance"))
         refresh_oldbalance(db,entity_id)
         db.commit()
-        socketio.emit("deleteTransactionOk",{})
+        name = db.query(models.Entities).filter_by(id=entity_id).first()
+        if name:
+            socketio.emit("deleteTransactionOk",{"name":name.name})
+        else:
+            socketio.emit("deleteTransactionOk",{"name":""})
     except Exception as e:
         db.rollback()
         print("Error:",e)
@@ -2176,6 +2218,138 @@ def getGoldReport(data):
     finally:
         db.close()
 
+
+@socketio.on("getCash")
+def getCash(data=None):
+    if not data:
+        emit("error", {"msg": "no data received"})
+        return
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    token = str(token)
+    try:
+        decoded = decode_token(token)
+        username = decoded["sub"]
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    db = SessionLocal()
+    try:
+        cash_helper_id = db.query(models.Entities).filter_by(name="Cash Helper").first().id
+        transactions = db.query(models.Transaction).filter_by(delete_bool=False).filter_by(entity_id=cash_helper_id).order_by(models.Transaction.created_at.desc()).all()
+        transactionData = []
+        for bill in transactions:
+            entity_id = bill.entity_id
+            entity = db.query(models.Entities).filter_by(id=entity_id).first()
+            if entity.delete_bool:
+                continue
+            entity_name = entity.name
+            entity_location = entity.location
+            entity_type = entity.type
+            total_cash = 0
+            items = db.query(models.TransactionItem).filter_by(transaction_id=bill.id).all()
+            for item in items:
+                if item.type.name=="PURCHASE":
+                    total_cash += item.cash
+                else:
+                    total_cash -= item.cash
+            transactionData.append({
+                "id": bill.id,
+                "created_at": str(bill.created_at),
+                "cash": total_cash,
+                "type": "PURCHASE" if total_cash<=0 else "SALE",
+            })
+        emit("cashData",transactionData)
+    except Exception as e:
+        db.rollback()
+        print("Error: ",e)
+        emit("error",{"message":"All Transaction Error!!"})
+    finally:
+        db.close()
+
+    
+@socketio.on("triggerEditCash")
+def triggerEditCash(data):
+    if not data:
+        emit("error", {"msg": "no data received"})
+        return
+    token = data.get("token")
+
+    if not token:
+        emit("error", {"msg": "no token"})
+        return
+    token = str(token)
+    try:
+        decoded = decode_token(token)
+        username = decoded["sub"]
+    except Exception as e:
+        print("Error",e)
+        emit("error", {"msg": "invalid token"})
+        return
+    db = SessionLocal()
+    try:
+        bill = db.query(models.Transaction).filter_by(id=data.get("id")).first()
+        entity_id = bill.entity_id
+        entity_name = db.query(models.Entities).filter_by(id=entity_id).first().name
+        entity_location = db.query(models.Entities).filter_by(id=entity_id).first().location
+        entity_type = db.query(models.Entities).filter_by(id=entity_id).first().type
+        items = db.query(models.TransactionItem).filter_by(transaction_id=data.get("id")).all()
+        items_data = []
+        for item in items:
+            item_name = db.query(models.Item).filter_by(id=item.item_id).first().name
+            if item_name=="Nil Correction":
+                emit("errorTransaction",{"type":"nill"})
+                return
+            seal_name = db.query(models.Entities).filter_by(id=item.seal).first()
+            if seal_name:
+                seal_name = seal_name.name
+            else:
+                seal_name = ""
+            items_data.append({
+                "id": item.id,
+                "name": item_name,
+                "touch": item.touch,
+                "seal": seal_name,
+                "profit_percent": item.profit_percent,
+                "wastage_percent": item.wastage_percent,
+                "stone_less": item.stone_less,
+                "type": item.type.name,
+                "quantity": item.quantity,
+                "base_weight": item.base_weight,
+                "cash": item.cash,
+                # "final_weight": item.final_weight,
+                # "created_by": item.created_by,
+            })
+        transactionData = {
+            "id": bill.id,
+            "name": entity_name,
+            "old_balance": bill.old_balance,
+            "new_balance": bill.new_balance,
+            "base_weight": bill.base_weight,
+            "final_weight": bill.final_weight,
+            "created_at": str(bill.created_at),
+            "updated_at": str(bill.updated_at),
+            "goldRate": bill.gold_rate,
+            "cash": bill.cash,
+            # "created_by": bill.created_by,
+            "location": entity_location,
+            "type": entity_type.name,
+            "items": items_data,
+            "created_at": str(bill.created_at),
+        }
+        emit("triggerEditCashFromServer",transactionData)
+    except Exception as e:
+        db.rollback()
+        print("Error: ",e)
+        import traceback
+        traceback.print_exc()
+        emit("error",{"message":"Edit Transaction Error!!"})
+    finally:
+        db.close()
 
 if __name__=="__main__":
     socketio.run(app,debug=True,port=5000)
