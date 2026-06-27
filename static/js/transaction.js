@@ -170,10 +170,28 @@ function addTransaction() {
 
     goldRate.addEventListener("input",()=>{
         currentDiv = goldRateCash(goldRate,cash,currentDiv);
+        let btn_inside = currentDiv.querySelectorAll("button")[0];
+        if(customer_type!=null){
+            if(customer_type=="customer"){
+                if(btn_inside.innerHTML=="SALE") btn_inside.click();
+            }
+            else{
+                if(btn_inside.innerHTML!="SALE") btn_inside.click();
+            }
+        }
     });
 
     cash.addEventListener("input",()=>{
         currentDiv = goldRateCash(goldRate,cash,currentDiv);
+        let btn_inside = currentDiv.querySelectorAll("button")[0];
+        if(customer_type!=null){
+            if(customer_type=="customer"){
+                if(btn_inside.innerHTML=="SALE") btn_inside.click();
+            }
+            else{
+                if(btn_inside.innerHTML!="SALE") btn_inside.click();
+            }
+        }
     });
 
     changeCashModeBtn.addEventListener("click",()=>{
