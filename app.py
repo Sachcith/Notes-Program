@@ -466,10 +466,14 @@ def search_item_name(data):
                     models.Rule.item_id == item.id,
                     models.Rule.entity_id == entity.id,
                 ).first()
+            isGold = 0
+            if "gold" in item.name.lower():
+                isGold = 1
             if rule==None:
                 itemData.append({
                     "itemName":item.name,
                     "itemTouch":item.touch,
+                    "isGold": isGold,
                 })
             else:
                 itemData.append({
@@ -477,6 +481,7 @@ def search_item_name(data):
                     "itemTouch":item.touch,
                     "itemProfit":rule.profit_percent,
                     "itemWastage":rule.wastage_percent,
+                    "isGold": isGold,
                 })
         emit("ItemNameResults",itemData)
 

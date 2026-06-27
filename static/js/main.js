@@ -503,6 +503,7 @@ function logout() {
 
 /* AUTO COMPLETE THINGY START */
 const autocompleteRegistry = {};
+let selectedItem = null;
 
 function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
@@ -532,6 +533,8 @@ function setupAutocomplete(inputId, type, callback = null,entity_name = null) {
 
     function selectItem(item) {
 
+        selectedItem = item;
+
         // 🔥 what appears in input box
         // input.value = item.name || item.location || item.value || "";
 
@@ -548,6 +551,15 @@ function setupAutocomplete(inputId, type, callback = null,entity_name = null) {
         const value = input.value.trim().toLowerCase();
 
         if (!value) {
+            selectedItem = null;
+            input.classList.remove("autocomplete-error");
+            return;
+        }
+
+        if (
+            selectedItem &&
+            (selectedItem[type] || "").trim().toLowerCase() === value
+        ) {
             input.classList.remove("autocomplete-error");
             return;
         }
@@ -636,6 +648,8 @@ function setupAutocomplete(inputId, type, callback = null,entity_name = null) {
     }
 
     function onInput() {
+
+        selectedItem = null;
         
         input.classList.remove("autocomplete-error");
 

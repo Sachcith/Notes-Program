@@ -39,6 +39,8 @@ socket.on("transactionData",(e)=>{
     });
 });
 
+let customer_type = null;
+
 /* ADD ENTRY */
 function addTransaction() {
     const grid = document.getElementById("grid");
@@ -151,6 +153,7 @@ function addTransaction() {
         const old_balance = parseFloat(item["old_balance"] || 0);
         document.getElementById("old_balance").innerHTML = parseFloat(old_balance.toFixed(3) || 0);
         document.getElementById("old_balance").dataset.realValue = old_balance;
+        customer_type = item["type"];
     });
 
     document.getElementById("name").focus();
@@ -414,6 +417,24 @@ function addItemRow(item = {}) {
         profit.value = item["itemProfit"];
         let wastage = document.getElementById(inputId+"Wastage");
         wastage.value = item["itemWastage"];
+        if(customer_type!=null){
+            if(customer_type=="customer"){
+                if(parseFloat(item["isGold"])==1){
+                    if(btn.innerHTML=="SALE") btn.click();
+                }
+                if(parseFloat(item["isGold"])==0){
+                    if(btn.innerHTML!="SALE") btn.click();
+                }
+            }
+            else{
+                if(parseFloat(item["isGold"])==1){
+                    if(btn.innerHTML!="SALE") btn.click();
+                }
+                if(parseFloat(item["isGold"])==0){
+                    if(btn.innerHTML=="SALE") btn.click();
+                }
+            }
+        }
     },() => {return document.getElementById("name").value || ""}
     );
 
